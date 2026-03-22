@@ -1,4 +1,5 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { useStore } from './store';
 import type { Page } from './types';
 import Login from './components/Login';
@@ -140,42 +141,48 @@ export function App() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen">
-        <Login onLogin={handleLogin} />
-        {showCommandPalette && (
-          <CommandPalette onClose={() => setShowCommandPalette(false)} onNavigate={navigate} />
-        )}
-      </div>
+      <>
+        <div className="min-h-screen">
+          <Login onLogin={handleLogin} />
+          {showCommandPalette && (
+            <CommandPalette onClose={() => setShowCommandPalette(false)} onNavigate={navigate} />
+          )}
+        </div>
+        <Analytics />
+      </>
     );
   }
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'dark bg-slate-900' : 'bg-gradient-to-br from-slate-50 via-white to-zinc-100'}`}>
-      <Layout
-        onNavigate={navigate}
-        currentPage={currentPage}
-        onNotificationsToggle={() => setShowNotifications(p => !p)}
-        onSearchToggle={() => setShowCommandPalette(p => !p)}
-      >
-        <Suspense fallback={<PageLoader />}>
-          {renderPage()}
-        </Suspense>
-      </Layout>
+    <>
+      <div className={`min-h-screen ${darkMode ? 'dark bg-slate-900' : 'bg-gradient-to-br from-slate-50 via-white to-zinc-100'}`}>
+        <Layout
+          onNavigate={navigate}
+          currentPage={currentPage}
+          onNotificationsToggle={() => setShowNotifications(p => !p)}
+          onSearchToggle={() => setShowCommandPalette(p => !p)}
+        >
+          <Suspense fallback={<PageLoader />}>
+            {renderPage()}
+          </Suspense>
+        </Layout>
 
-      <SessionTimeout />
-      <ReAuthModal />
+        <SessionTimeout />
+        <ReAuthModal />
 
-      {showCommandPalette && (
-        <CommandPalette onClose={() => setShowCommandPalette(false)} onNavigate={navigate} />
-      )}
-      {showNotifications && (
-        <NotificationPanel
-          onClose={() => setShowNotifications(false)}
-          onMarkAllRead={() => useStore.getState().markAllNotificationsRead()}
-        />
-      )}
-      <InstallButton position="floating" />
-    </div>
+        {showCommandPalette && (
+          <CommandPalette onClose={() => setShowCommandPalette(false)} onNavigate={navigate} />
+        )}
+        {showNotifications && (
+          <NotificationPanel
+            onClose={() => setShowNotifications(false)}
+            onMarkAllRead={() => useStore.getState().markAllNotificationsRead()}
+          />
+        )}
+        <InstallButton position="floating" />
+      </div>
+      <Analytics />
+    </>
   );
 }
 
