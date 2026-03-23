@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Database, Moon, Sun, Shield, Bell, Upload, Save, CheckCircle, Wifi, WifiOff, Phone, Mail, MapPin, Hash } from 'lucide-react';
+import {
+  Settings, Database, Moon, Sun, Shield, Bell, Upload, Save, CheckCircle, Wifi, WifiOff,
+  Phone, Mail, MapPin, Hash, ExternalLink,
+} from 'lucide-react';
 import { useStore } from '../store';
 import { dbService } from '../lib/db-service';
+import { whatsAppMeUrl } from '../lib/whatsapp';
 
 export default function SettingsPage() {
   const { tenant, darkMode, setDarkMode, appSettings, updateAppSettings } = useStore();
@@ -14,10 +18,21 @@ export default function SettingsPage() {
   const [agencyAddress, setAgencyAddress] = useState(appSettings.agency_address || '');
   const [irdaiLicense, setIrdaiLicense] = useState(appSettings.irdai_license || '');
   const [primaryColor, setPrimaryColor] = useState(appSettings.primary_color);
+  const [whatsappAutomationEnabled, setWhatsappAutomationEnabled] = useState(Boolean(appSettings.whatsapp_automation_enabled));
+  const [whatsappBirthdayEnabled, setWhatsappBirthdayEnabled] = useState(Boolean(appSettings.whatsapp_birthday_enabled));
+  const [whatsappRenewalEnabled, setWhatsappRenewalEnabled] = useState(Boolean(appSettings.whatsapp_renewal_enabled));
+  const [whatsappBirthdayTemplate, setWhatsappBirthdayTemplate] = useState(appSettings.whatsapp_birthday_template || '');
+  const [whatsappRenewalTemplate, setWhatsappRenewalTemplate] = useState(appSettings.whatsapp_renewal_template || '');
   const [saved, setSaved] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState('');
 
   useEffect(() => {
     checkDb();
+  }, []);
+
+  useEffect(() => {
+    const base = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '');
+    setWebhookUrl(`${base}/api/whatsapp-webhook`);
   }, []);
 
   const checkDb = async () => {
@@ -51,6 +66,11 @@ export default function SettingsPage() {
       agency_address: agencyAddress,
       irdai_license: irdaiLicense,
       primary_color: primaryColor,
+      whatsapp_automation_enabled: whatsappAutomationEnabled,
+      whatsapp_birthday_enabled: whatsappBirthdayEnabled,
+      whatsapp_renewal_enabled: whatsappRenewalEnabled,
+      whatsapp_birthday_template: whatsappBirthdayTemplate,
+      whatsapp_renewal_template: whatsappRenewalTemplate,
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
@@ -124,6 +144,77 @@ export default function SettingsPage() {
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
             </div>
 
+            {/* WhatsApp Automation */}
+            <div className="md:col-span-2">
+              <div className="flex items-start justify-between gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <div>
+                  <p className="font-semibold text-slate-900">WhatsApp Automation</p>
+                  <p className="text-sm text-slate-500 mt-1">
+                    When enabled, the system will auto-send WhatsApp messages for birthday and renewal reminders.
+                  </p>
+                </div>
+                <label className="flex items-center gap-2 select-none pt-1">
+                  <input
+                    type="checkbox"
+                    checked={whatsappAutomationEnabled}
+                    onChange={(e) => {
+                      setWhatsappAutomationEnabled(e.target.checked);
+                      if (!e.target.checked) {
+                        setWhatsappBirthdayEnabled(false);
+                        setWhatsappRenewalEnabled(false);
+                      }
+                    }}
+                    className="rounded border-slate-300"
+                  />
+                  <span className="text-sm font-medium text-slate-700">Enabled</span>
+                </label>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white rounded-2xl border border-slate-100 p-4">
+                  <label className="flex items-center gap-2 select-none">
+                    <input
+                      type="checkbox"
+                      checked={whatsappBirthdayEnabled}
+                      onChange={(e) => setWhatsappBirthdayEnabled(e.target.checked)}
+                      disabled={!whatsappAutomationEnabled}
+                      className="rounded border-slate-300 disabled:opacity-50"
+                    />
+                    <span className="text-sm font-medium text-slate-700">Birthday messages</span>
+                  </label>
+                  <textarea
+                    value={whatsappBirthdayTemplate}
+                    onChange={(e) => setWhatsappBirthdayTemplate(e.target.value)}
+                    disabled={!whatsappAutomationEnabled || !whatsappBirthdayEnabled}
+                    className="mt-3 w-full min-h-[108px] px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:opacity-60"
+                  />
+                  <p className="text-xs text-slate-400 mt-2">Placeholders: <code className="font-mono">{"{{name}}"}</code></p>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-100 p-4">
+                  <label className="flex items-center gap-2 select-none">
+                    <input
+                      type="checkbox"
+                      checked={whatsappRenewalEnabled}
+                      onChange={(e) => setWhatsappRenewalEnabled(e.target.checked)}
+                      disabled={!whatsappAutomationEnabled}
+                      className="rounded border-slate-300 disabled:opacity-50"
+                    />
+                    <span className="text-sm font-medium text-slate-700">Renewal reminders</span>
+                  </label>
+                  <textarea
+                    value={whatsappRenewalTemplate}
+                    onChange={(e) => setWhatsappRenewalTemplate(e.target.value)}
+                    disabled={!whatsappAutomationEnabled || !whatsappRenewalEnabled}
+                    className="mt-3 w-full min-h-[108px] px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:opacity-60"
+                  />
+                  <p className="text-xs text-slate-400 mt-2">
+                    Placeholders: <code className="font-mono">{"{{name}}"}</code>, <code className="font-mono">{"{{policy_type}}"}</code>, <code className="font-mono">{"{{policy_number}}"}</code>, <code className="font-mono">{"{{days_left}}"}</code>
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-1">
@@ -159,6 +250,42 @@ export default function SettingsPage() {
             className={`mt-6 px-6 py-2.5 rounded-xl font-semibold transition-all flex items-center gap-2 text-sm ${saved ? 'bg-green-600 text-white' : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'}`}>
             {saved ? <><CheckCircle className="w-4 h-4" /> Saved!</> : <><Save className="w-4 h-4" /> Save Changes</>}
           </button>
+        </motion.div>
+      )}
+
+      {/* WhatsApp Cloud API (Meta) — owner */}
+      {tenant?.role === 'owner' && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-white/80 backdrop-blur rounded-2xl shadow border border-white/20 p-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
+            <Phone className="w-5 h-5 text-green-600" /> WhatsApp Cloud API (Meta)
+          </h2>
+          <p className="text-sm text-slate-500 mb-4">
+            Use the saved agency number for wa.me links. For automated messaging, configure Meta WhatsApp Cloud API and these server environment variables on Vercel:
+            <code className="block mt-2 text-xs bg-slate-100 p-3 rounded-lg font-mono text-slate-800">
+              WHATSAPP_VERIFY_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN
+            </code>
+          </p>
+          <div className="space-y-3 text-sm">
+            <div>
+              <p className="text-slate-500 text-xs mb-1">Webhook callback URL (Meta dashboard)</p>
+              <p className="font-mono text-xs break-all bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-800">{webhookUrl || '…'}</p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href={whatsAppMeUrl(whatsappNumber || appSettings.whatsapp_number || '')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Open WhatsApp (saved number)
+              </a>
+              <span className="text-xs text-slate-400 self-center">
+                Server route <code className="font-mono">POST /api/whatsapp-send</code> sends messages when tokens are set (Bearer <code className="font-mono">SYNC_SECRET</code>).
+              </span>
+            </div>
+          </div>
         </motion.div>
       )}
 

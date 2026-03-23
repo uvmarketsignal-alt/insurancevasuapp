@@ -1,7 +1,5 @@
 // ─── PRISMA MOCK CLIENT ───────────────────────────────────────────────────────
-// Complete in-memory database with Neon PostgreSQL fallback
-
-const DATABASE_URL = 'postgresql://neondb_owner:npg_2EZhYb9dHjVS@ep-gentle-bread-adfrbjl3-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
+// In-memory store for browser-side code. Real persistence uses Vercel /api/sync + Neon.
 
 // In-memory store for all entities
 const memoryStore: Record<string, Map<string, any>> = {
@@ -13,23 +11,6 @@ const memoryStore: Record<string, Map<string, any>> = {
   compliance_reports: new Map(), knowledge_articles: new Map(),
   ai_insights: new Map(), security_events: new Map(), performance_metrics: new Map(),
 };
-
-// Try Neon connection
-let neonSql: ((strings: TemplateStringsArray, ...values: any[]) => Promise<any>) | null = null;
-let neonAvailable = false;
-
-(async () => {
-  try {
-    const { neon } = await import('@neondatabase/serverless');
-    neonSql = neon(DATABASE_URL);
-    await neonSql`SELECT 1`;
-    neonAvailable = true;
-    console.log('✅ Neon PostgreSQL connected');
-  } catch {
-    neonAvailable = false;
-    console.log('⚠️ Using in-memory store (Neon unavailable)');
-  }
-})();
 
 function matchesWhere(record: any, where: any): boolean {
   return Object.entries(where).every(([key, val]) => {
@@ -137,12 +118,11 @@ export class PrismaClient {
   async $connect() { return Promise.resolve(); }
   async $disconnect() { return Promise.resolve(); }
   async $queryRaw(_query: TemplateStringsArray) {
-    if (neonAvailable && neonSql) {
-      return neonSql`SELECT 1 as connected`;
-    }
     return [{ connected: 1 }];
   }
   async $executeRaw(_query: TemplateStringsArray) { return 0; }
 }
 
-export function getNeonStatus() { return neonAvailable; }
+export function getNeonStatus() {
+  return false;
+}

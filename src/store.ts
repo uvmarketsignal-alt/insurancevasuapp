@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { hashPassword, validatePasswordStrength, verifyPassword } from './utils/password';
 import { sanitizeEmail, sanitizeNumeric, sanitizePhone, sanitizeText } from './utils/security';
+import { fetchSnapshot, isServerSyncEnabled, postWhatsAppSend } from './lib/api';
+import { reviveDeep } from './lib/reviveDates';
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -239,6 +241,12 @@ export interface AppSettings {
   agency_email?: string;
   agency_address?: string;
   irdai_license?: string;
+  // WhatsApp automation settings (optional to keep backward compatibility with older snapshots)
+  whatsapp_automation_enabled?: boolean;
+  whatsapp_birthday_enabled?: boolean;
+  whatsapp_renewal_enabled?: boolean;
+  whatsapp_birthday_template?: string;
+  whatsapp_renewal_template?: string;
   is_dark_mode: boolean;
   created_at: Date;
   updated_at: Date;
@@ -273,7 +281,8 @@ export type Page =
   | 'analytics'
   | 'compliance'
   | 'settings'
-  | 'profile';
+  | 'profile'
+  | 'policy-assistant';
 
 // ─── DEMO DATA ────────────────────────────────────────────────────────────────
 
@@ -477,6 +486,13 @@ const DEFAULT_APP_SETTINGS: AppSettings = {
   agency_email: 'uvmarketsignal@gmail.com',
   agency_address: 'UV Insurance Agency, Bangalore, Karnataka',
   irdai_license: 'IRDAI-AGT-2024-001',
+  whatsapp_automation_enabled: false,
+  whatsapp_birthday_enabled: false,
+  whatsapp_renewal_enabled: false,
+  whatsapp_birthday_template:
+    'Hi {{name}}! Wishing you a very happy birthday. We’re here for any insurance-related support. This is an agency reminder, not a guarantee. Reply STOP to opt out.',
+  whatsapp_renewal_template:
+    'Hi {{name}}! Your {{policy_type}} policy {{policy_number}} is expiring in {{days_left}} days. This is an agency reminder, not a guarantee. Reply STOP to opt out.',
   is_dark_mode: false,
   created_at: new Date('2024-01-01'),
   updated_at: new Date(),
@@ -525,6 +541,9 @@ interface AppState {
   // Re-auth
   reAuthRequired: boolean;
   reAuthAttempts: number;
+
+  /** Set true after first server load (or skip) so debounced sync can run */
+  syncFromServerComplete: boolean;
 
   // ── Actions ──
 
@@ -617,11 +636,11 @@ interface AppState {
   clearNewCustomerData: () => void;
   resetReAuthAttempts: () => void;
   setReAuthRequired: (required: boolean) => void;
-  loadInitialData: (tenantId: string) => void;
+  loadInitialData: (tenantId: string) => Promise<void>;
 
   // Automation
-  checkBirthdayNotifications: () => void;
-  checkRenewalNotifications: () => void;
+  checkBirthdayNotifications: () => Promise<void>;
+  checkRenewalNotifications: () => Promise<void>;
 }
 
 // ─── STORE ────────────────────────────────────────────────────────────────────
@@ -664,6 +683,7 @@ export const useStore = create<AppState>()(
       newCustomerStep: 0,
       reAuthRequired: false,
       reAuthAttempts: 0,
+      syncFromServerComplete: false,
 
       // ── LOGIN ──────────────────────────────────────────────────────────────
       login: async (email, password) => {
@@ -761,6 +781,7 @@ export const useStore = create<AppState>()(
           currentPage: 'login',
           newCustomerData: {},
           newCustomerStep: 0,
+          syncFromServerComplete: false,
         });
       },
 
@@ -1281,26 +1302,98 @@ export const useStore = create<AppState>()(
       resetReAuthAttempts: () => set({ reAuthAttempts: 0 }),
       setReAuthRequired: (required) => set({ reAuthRequired: required }),
 
-      loadInitialData: (_tenantId: string) => {
-        // Data is already loaded from SAMPLE_DATA
-        // In production, this would fetch from Neon PostgreSQL
-        console.log('✅ Data loaded for tenant:', _tenantId);
+      loadInitialData: async (tenantId: string) => {
+        if (!isServerSyncEnabled()) {
+          set({ syncFromServerComplete: true });
+          return;
+        }
+        const snap = await fetchSnapshot(tenantId);
+        if (!snap) {
+          set({ syncFromServerComplete: true });
+          return;
+        }
+        const s = get();
+        set({
+          appSettings: snap.appSettings ? (reviveDeep(snap.appSettings) as AppSettings) : s.appSettings,
+          customers: Array.isArray(snap.customers) ? (snap.customers.map(reviveDeep) as Customer[]) : s.customers,
+          policies: Array.isArray(snap.policies) ? (snap.policies.map(reviveDeep) as CustomerPolicy[]) : s.policies,
+          documents: Array.isArray(snap.documents) ? (snap.documents.map(reviveDeep) as Document[]) : s.documents,
+          claims: Array.isArray(snap.claims) ? (snap.claims.map(reviveDeep) as Claim[]) : s.claims,
+          leads: Array.isArray(snap.leads) ? (snap.leads.map(reviveDeep) as Lead[]) : s.leads,
+          notifications: Array.isArray(snap.notifications) ? (snap.notifications.map(reviveDeep) as Notification[]) : s.notifications,
+          knowledgeArticles: Array.isArray(snap.knowledgeArticles)
+            ? (snap.knowledgeArticles.map(reviveDeep) as KnowledgeArticle[])
+            : s.knowledgeArticles,
+          commissions: Array.isArray(snap.commissions) ? (snap.commissions.map(reviveDeep) as Commission[]) : s.commissions,
+          renewals: Array.isArray(snap.renewals) ? (snap.renewals.map(reviveDeep) as Renewal[]) : s.renewals,
+          auditLogs: Array.isArray(snap.auditLogs) ? (snap.auditLogs.map(reviveDeep) as AuditLog[]) : s.auditLogs,
+          familyMembers: Array.isArray(snap.familyMembers) ? (snap.familyMembers.map(reviveDeep) as FamilyMember[]) : s.familyMembers,
+          endorsements: Array.isArray(snap.endorsements) ? (snap.endorsements.map(reviveDeep) as Endorsement[]) : s.endorsements,
+          complianceReports: Array.isArray(snap.complianceReports)
+            ? (snap.complianceReports.map(reviveDeep) as ComplianceReport[])
+            : s.complianceReports,
+          employees: Array.isArray(snap.employees) ? (snap.employees.map(reviveDeep) as Employee[]) : s.employees,
+          syncFromServerComplete: true,
+        });
       },
 
       // ── AUTOMATION ────────────────────────────────────────────────────────
-      checkBirthdayNotifications: () => {
-        const { customers, notifications } = get();
+      checkBirthdayNotifications: async () => {
+        const { customers, tenant, appSettings } = get();
         const today = new Date();
         const todayStr = `${today.getMonth()}-${today.getDate()}`;
+        const dateKey = today.toISOString().slice(0, 10);
 
-        customers.filter(c => c.status === 'approved' && c.date_of_birth).forEach(async (customer) => {
+        const tenantId = tenant?.id ?? 'tenant_001';
+        const automationEnabled = Boolean(appSettings.whatsapp_automation_enabled);
+        const birthdayEnabled = Boolean(appSettings.whatsapp_birthday_enabled);
+        const template = (appSettings.whatsapp_birthday_template || '').trim();
+
+        const fillTemplate = (tpl: string, vars: Record<string, string>) =>
+          tpl.replace(/\{\{(\w+)\}\}/g, (m, k) => (vars[k] !== undefined ? vars[k] : m));
+
+        const ensureOptOut = (message: string) => {
+          const hasStop = /stop/i.test(message);
+          const hasOptOut = /opt\s*out/i.test(message) || /optout/i.test(message);
+          const hasNotGuarantee = /not a guarantee|no guarantee/i.test(message);
+
+          let out = message;
+          if (!hasNotGuarantee) {
+            out = `${out}\n\nThis is an agency reminder, not a guarantee.`;
+          }
+          if (hasStop && hasOptOut) return out;
+          return `${out}\n\nReply STOP to opt out.`;
+        };
+
+        const MAX_WHATSAPP_SENDS_PER_RUN = 10;
+        let sends = 0;
+
+        for (const customer of customers.filter((c) => c.status === 'approved' && c.date_of_birth)) {
+          if (sends >= MAX_WHATSAPP_SENDS_PER_RUN) break;
           const dob = new Date(customer.date_of_birth!);
           const dobStr = `${dob.getMonth()}-${dob.getDate()}`;
-          const alreadyNotified = notifications.some(n => n.message.includes(customer.full_name) && n.title.includes('Birthday') && new Date(n.created_at).toDateString() === today.toDateString());
 
-          if (dobStr === todayStr && !alreadyNotified) {
+          if (dobStr !== todayStr) continue;
+
+          const currentNotifications = get().notifications;
+          const alreadyNotified = currentNotifications.some(
+            (n) =>
+              n.message.includes(customer.full_name) &&
+              n.title.includes('Birthday') &&
+              new Date(n.created_at).toDateString() === today.toDateString(),
+          );
+
+          const alreadyWhatsAppSent = currentNotifications.some(
+            (n) =>
+              n.title === 'WhatsApp Sent: Birthday' &&
+              n.message.includes(customer.id) &&
+              n.message.includes(dateKey),
+          );
+
+          // Keep existing in-app notification behavior.
+          if (!alreadyNotified) {
             await get().addNotification({
-              tenant_id: 'tenant_001',
+              tenant_id: tenantId,
               title: `🎂 Birthday Today!`,
               message: `${customer.full_name}'s birthday! Call: ${customer.phone} | WhatsApp: https://wa.me/${customer.phone?.replace(/\D/g, '')}`,
               type: 'success',
@@ -1309,25 +1402,103 @@ export const useStore = create<AppState>()(
               created_at: new Date(),
             });
           }
-        });
+
+          if (!automationEnabled || !birthdayEnabled) continue;
+          if (!template || alreadyWhatsAppSent) continue;
+          if (!customer.phone) continue;
+
+          const message = ensureOptOut(
+            fillTemplate(template, {
+              name: customer.full_name,
+              phone: customer.phone,
+            }),
+          ).slice(0, 3800);
+
+          try {
+            const r = await postWhatsAppSend({ to: customer.phone, message });
+            await get().addAuditLog({
+              user_name: `${tenant?.name ?? 'system'} (${tenant?.role ?? 'unknown'})`,
+              action: 'WHATSAPP_SEND_BIRTHDAY',
+              entity_type: 'customer',
+              entity_id: customer.id,
+              new_values: `to=${customer.phone} result=${r.ok ? 'ok' : 'fail'} ${r.error ? `error=${r.error}` : ''}`.trim(),
+            });
+
+            if (r.ok) {
+              await get().addNotification({
+                tenant_id: tenantId,
+                title: 'WhatsApp Sent: Birthday',
+                message: `customerId=${customer.id} date=${dateKey}\n${message}`,
+                type: 'success',
+                is_read: false,
+                priority: 'low',
+                created_at: new Date(),
+              });
+              sends += 1;
+            }
+          } catch (e) {
+            await get().addAuditLog({
+              user_name: `${tenant?.name ?? 'system'} (${tenant?.role ?? 'unknown'})`,
+              action: 'WHATSAPP_SEND_BIRTHDAY_ERROR',
+              entity_type: 'customer',
+              entity_id: customer.id,
+              new_values: `to=${customer.phone} error=${e instanceof Error ? e.message : String(e)}`,
+            });
+          }
+        }
       },
 
-      checkRenewalNotifications: () => {
-        const { renewals, policies, customers, notifications } = get();
+      checkRenewalNotifications: async () => {
+        const { renewals, policies, customers, tenant, appSettings } = get();
         const now = new Date();
 
-        renewals.filter(r => !r.processed && r.status === 'pending').forEach(async (renewal) => {
+        const tenantId = tenant?.id ?? 'tenant_001';
+        const automationEnabled = Boolean(appSettings.whatsapp_automation_enabled);
+        const renewalEnabled = Boolean(appSettings.whatsapp_renewal_enabled);
+        const template = (appSettings.whatsapp_renewal_template || '').trim();
+
+        const fillTemplate = (tpl: string, vars: Record<string, string>) =>
+          tpl.replace(/\{\{(\w+)\}\}/g, (m, k) => (vars[k] !== undefined ? vars[k] : m));
+
+        const ensureOptOut = (message: string) => {
+          const hasStop = /stop/i.test(message);
+          const hasOptOut = /opt\s*out/i.test(message) || /optout/i.test(message);
+          const hasNotGuarantee = /not a guarantee|no guarantee/i.test(message);
+
+          let out = message;
+          if (!hasNotGuarantee) {
+            out = `${out}\n\nThis is an agency reminder, not a guarantee.`;
+          }
+          if (hasStop && hasOptOut) return out;
+          return `${out}\n\nReply STOP to opt out.`;
+        };
+
+        const MAX_WHATSAPP_SENDS_PER_RUN = 10;
+        let sends = 0;
+
+        const renewalCandidates = renewals.filter((r) => !r.processed && r.status === 'pending');
+        for (const renewal of renewalCandidates) {
+          if (sends >= MAX_WHATSAPP_SENDS_PER_RUN) break;
           const renewalDate = new Date(renewal.renewal_date);
           const daysLeft = Math.ceil((renewalDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          const policy = policies.find(p => p.id === renewal.policy_id);
-          const customer = customers.find(c => c.id === policy?.customer_id);
-          const alreadyNotified = notifications.some(n => n.message.includes(policy?.policy_number || '') && new Date(n.created_at).toDateString() === now.toDateString());
+          if (daysLeft > 30) continue;
 
-          if ((daysLeft <= 30) && !alreadyNotified && customer) {
+          const policy = policies.find((p) => p.id === renewal.policy_id);
+          const customer = customers.find((c) => c.id === policy?.customer_id);
+          if (!policy || !customer) continue;
+
+          const currentNotifications = get().notifications;
+          const alreadyNotified = currentNotifications.some(
+            (n) =>
+              n.message.includes(policy.policy_number || '') &&
+              new Date(n.created_at).toDateString() === now.toDateString(),
+          );
+
+          if (!alreadyNotified) {
             await get().addNotification({
-              tenant_id: 'tenant_001',
+              tenant_id: tenantId,
               title: daysLeft <= 7 ? '🚨 Urgent Renewal!' : '🔔 Renewal Reminder',
-              message: `${customer.full_name}'s ${policy?.policy_type} policy ${policy?.policy_number} expires in ${daysLeft} days`,
+              message: `${customer.full_name}'s ${policy.policy_type} policy ${policy.policy_number} expires in ${daysLeft} days`,
               type: daysLeft <= 7 ? 'error' : 'warning',
               is_read: false,
               priority: daysLeft <= 7 ? 'urgent' : 'high',
@@ -1335,7 +1506,61 @@ export const useStore = create<AppState>()(
               created_at: new Date(),
             });
           }
-        });
+
+          const dateKey = now.toISOString().slice(0, 10);
+          const alreadyWhatsAppSent = currentNotifications.some(
+            (n) =>
+              n.title === 'WhatsApp Sent: Renewal' &&
+              n.message.includes(customer.id) &&
+              n.message.includes(dateKey),
+          );
+
+          if (!automationEnabled || !renewalEnabled) continue;
+          if (!template || alreadyWhatsAppSent) continue;
+          if (!customer.phone) continue;
+
+          const message = ensureOptOut(
+            fillTemplate(template, {
+              name: customer.full_name,
+              phone: customer.phone,
+              policy_type: policy.policy_type,
+              policy_number: policy.policy_number,
+              days_left: String(daysLeft),
+            }),
+          ).slice(0, 3800);
+
+          try {
+            const r = await postWhatsAppSend({ to: customer.phone, message });
+            await get().addAuditLog({
+              user_name: `${tenant?.name ?? 'system'} (${tenant?.role ?? 'unknown'})`,
+              action: 'WHATSAPP_SEND_RENEWAL',
+              entity_type: 'customer',
+              entity_id: customer.id,
+              new_values: `to=${customer.phone} result=${r.ok ? 'ok' : 'fail'} ${r.error ? `error=${r.error}` : ''}`.trim(),
+            });
+
+            if (r.ok) {
+              await get().addNotification({
+                tenant_id: tenantId,
+                title: 'WhatsApp Sent: Renewal',
+                message: `customerId=${customer.id} date=${dateKey}\n${message}`,
+                type: 'success',
+                is_read: false,
+                priority: 'low',
+                created_at: new Date(),
+              });
+              sends += 1;
+            }
+          } catch (e) {
+            await get().addAuditLog({
+              user_name: `${tenant?.name ?? 'system'} (${tenant?.role ?? 'unknown'})`,
+              action: 'WHATSAPP_SEND_RENEWAL_ERROR',
+              entity_type: 'customer',
+              entity_id: customer.id,
+              new_values: `to=${customer.phone} error=${e instanceof Error ? e.message : String(e)}`,
+            });
+          }
+        }
       },
     }),
     {

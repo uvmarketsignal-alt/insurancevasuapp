@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../store';
 import { LiveCamera } from '../components/LiveCamera';
+import { isServerSyncEnabled, uploadDocumentFile } from '../lib/api';
 
 interface NewCustomerPageProps {
   onComplete: () => void;
@@ -1175,13 +1176,31 @@ export default function NewCustomerPage({ onComplete }: NewCustomerPageProps) {
         },
       } as any);
 
-      // Upload documents
+      // Upload documents (Vercel Blob when server sync is configured)
       for (const doc of mergedDocuments) {
         if (!doc.file) continue;
 
-        const fileUrl = doc.captured && doc.preview_url
+        let fileUrl = doc.captured && doc.preview_url
           ? doc.preview_url
           : URL.createObjectURL(doc.file);
+
+        if (doc.file instanceof File && isServerSyncEnabled()) {
+          const uploaded = await uploadDocumentFile(doc.file);
+          if (!uploaded) {
+            setSubmissionError('Document upload failed. Check Vercel Blob token and try again.');
+            setIsSubmitting(false);
+            // Revoke blob URL on failure if we created one
+            if (!doc.captured || !doc.preview_url) {
+              URL.revokeObjectURL(fileUrl);
+            }
+            return;
+          }
+          // Revoke the temporary blob URL since we're using the server URL
+          if (!doc.captured || !doc.preview_url) {
+            URL.revokeObjectURL(fileUrl);
+          }
+          fileUrl = uploaded;
+        }
 
         await addDocument({
           customer_id: customer.id,

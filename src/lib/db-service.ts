@@ -578,11 +578,12 @@ export class DatabaseService {
     }) as Promise<Tenant>;
   }
 
-  // Database health check
+  // Database health check (Neon via Vercel /api/health — not in-browser)
   async healthCheck(): Promise<boolean> {
     try {
-      await prisma.$queryRaw`SELECT 1`;
-      return true;
+      const { checkApiHealth } = await import('./api');
+      const { db } = await checkApiHealth();
+      return db;
     } catch (error) {
       console.error('Database health check failed:', error);
       return false;

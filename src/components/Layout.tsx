@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, 
@@ -21,7 +21,8 @@ import {
   Clock,
   DollarSign,
   Users2,
-  ClipboardList
+  ClipboardList,
+  Sparkles
 } from 'lucide-react';
 import { useStore } from '../store';
 import { Logo } from './Logo';
@@ -46,7 +47,15 @@ interface NavItem {
 }
 
 export default function Layout({ children, onNavigate, currentPage, onNotificationsToggle, onSearchToggle }: LayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const desktopQuery = '(min-width: 1024px)';
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia(desktopQuery).matches;
+  });
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia(desktopQuery).matches;
+  });
   const { tenant, profile, notifications } = useStore();
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -73,6 +82,7 @@ export default function Layout({ children, onNavigate, currentPage, onNotificati
     // System
     { id: 'audit-logs', label: 'Audit Logs', icon: <ClipboardList className="w-5 h-5" />, roles: ['owner'] },
     { id: 'knowledge-base', label: 'Knowledge Base', icon: <BookOpen className="w-5 h-5" />, roles: ['owner', 'employee'] },
+    { id: 'policy-assistant', label: 'Policy Assistant', icon: <Sparkles className="w-5 h-5" />, roles: ['owner', 'employee'] },
     { id: 'analytics', label: 'Analytics', icon: <BarChart3 className="w-5 h-5" />, roles: ['owner'] },
     { id: 'compliance', label: 'Compliance', icon: <ShieldCheck className="w-5 h-5" />, roles: ['owner'] },
     { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" />, roles: ['owner'] },
@@ -92,8 +102,22 @@ export default function Layout({ children, onNavigate, currentPage, onNotificati
 
   const handleNavigate = (page: Page) => {
     onNavigate(page);
-    setSidebarOpen(false);
+    if (!isDesktop) setSidebarOpen(false);
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia(desktopQuery);
+    const onChange = () => {
+      const nextIsDesktop = mq.matches;
+      setIsDesktop(nextIsDesktop);
+      // Keep sidebar pinned open on desktop; only allow collapsing on mobile.
+      setSidebarOpen(nextIsDesktop ? true : false);
+    };
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-zinc-100">

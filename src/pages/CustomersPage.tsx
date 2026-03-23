@@ -4,9 +4,10 @@ import {
   Search, Filter, Plus, Edit, Trash2, X, Save,
   User, Phone, Mail, MapPin, Briefcase, DollarSign,
   CheckCircle, Clock, XCircle, AlertCircle, Download,
-  ChevronDown, ChevronUp, Calendar,
+  ChevronDown, ChevronUp, Calendar, MessageCircle,
 } from 'lucide-react';
 import { useStore } from '../store';
+import { whatsAppLinkForCustomer } from '../lib/whatsapp';
 import { format } from 'date-fns';
 import type { Page, Customer } from '../types';
 
@@ -265,6 +266,16 @@ export default function CustomersPage({ onNavigate }: Props) {
 
                     {/* Actions */}
                     <div className="flex items-center gap-1 flex-shrink-0">
+                      <a
+                        href={whatsAppLinkForCustomer(customer.phone, `Hi ${customer.full_name}, `)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                        title="WhatsApp"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </a>
                       <button onClick={() => setExpandedId(isExpanded ? null : customer.id)}
                         className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" title="View Details">
                         {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}

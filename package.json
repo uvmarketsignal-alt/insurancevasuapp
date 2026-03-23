@@ -6,33 +6,40 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
-    "@prisma/client": "^7.4.2",
+    "@vercel/blob": "^2.3.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
     "framer-motion": "^12.35.1",
     "lucide-react": "^0.577.0",
-    "prisma": "^7.4.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-webcam": "^7.2.0",
     "tailwind-merge": "^3.5.0",
-    "xlsx": "^0.18.5",
     "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.1.17",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.0.0",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "5.1.1",
+    "@vitest/coverage-v8": "^4.1.0",
+    "jsdom": "^29.0.1",
+    "prisma": "^7.4.2",
     "tailwindcss": "4.1.17",
     "typescript": "5.9.3",
     "vite": "7.2.4",
-    "vite-plugin-singlefile": "^2.3.0"
+    "vite-plugin-singlefile": "^2.3.0",
+    "vitest": "^4.1.0"
   }
 }

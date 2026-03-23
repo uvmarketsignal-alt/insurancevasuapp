@@ -4,7 +4,7 @@ import {
   Search, X, Users, FileCheck, AlertCircle, BookOpen,
   BarChart3, ShieldCheck, Settings, LogOut, Camera,
   FileText, Home, Clock, DollarSign, Users2, ClipboardList,
-  TrendingUp, User, Zap, ArrowRight, Hash
+  TrendingUp, User, Zap, ArrowRight, Hash, Sparkles
 } from 'lucide-react';
 import { useStore } from '../store';
 import type { Page } from '../types';
@@ -231,6 +231,18 @@ export function CommandPalette({ onClose, onNavigate }: CommandPaletteProps) {
       badgeColor: 'bg-blue-100 text-blue-700',
       action: () => { onNavigate('knowledge-base'); onClose(); },
       keywords: ['knowledge', 'articles', 'help', 'docs', 'guide', 'faq'],
+      roles: ['owner', 'employee'],
+    },
+    {
+      id: 'cmd-policy-assistant',
+      type: 'command',
+      title: 'Policy Assistant',
+      subtitle: 'AI-style Q&A on policies and compliance',
+      icon: <Sparkles className="w-4 h-4" />,
+      badge: 'Nav',
+      badgeColor: 'bg-violet-100 text-violet-700',
+      action: () => { onNavigate('policy-assistant'); onClose(); },
+      keywords: ['assistant', 'chat', 'bot', 'ai', 'policy', 'irdai', 'compliance', 'ask'],
       roles: ['owner', 'employee'],
     },
     {

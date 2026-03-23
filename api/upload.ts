@@ -1,0 +1,48 @@
+import type { VercelRequest, VercelResponse } from './lib/vercel-types';
+import { put } from '@vercel/blob';
+import { assertSyncAuth } from './lib/auth';
+
+const MAX_BYTES = 4 * 1024 * 1024;
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return res.status(503).json({ error: 'BLOB_READ_WRITE_TOKEN not configured' });
+  }
+  if (!process.env.SYNC_SECRET || !assertSyncAuth(req)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const body = req.body as { filename?: string; contentType?: string; data?: string };
+  const filename = body.filename || 'upload.bin';
+  const contentType = body.contentType || 'application/octet-stream';
+  const data = body.data;
+  if (!data || typeof data !== 'string') {
+    return res.status(400).json({ error: 'data (base64) required' });
+  }
+
+  let buffer: Buffer;
+  try {
+    buffer = Buffer.from(data, 'base64');
+  } catch {
+    return res.status(400).json({ error: 'Invalid base64' });
+  }
+  if (buffer.length > MAX_BYTES) {
+    return res.status(413).json({ error: 'File too large (max 4MB)' });
+  }
+
+  try {
+    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 200);
+    const blob = await put(`docs/${Date.now()}-${safeName}`, buffer, {
+      access: 'public',
+      contentType,
+    });
+    return res.status(200).json({ url: blob.url });
+  } catch (e) {
+    console.error('blob upload', e);
+    return res.status(500).json({ error: 'Upload failed' });
+  }
+}

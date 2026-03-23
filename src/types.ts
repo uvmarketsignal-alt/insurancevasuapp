@@ -364,7 +364,8 @@ export type Page =
   | 'analytics'
   | 'compliance'
   | 'settings'
-  | 'profile';
+  | 'profile'
+  | 'policy-assistant';
 
 export interface NewCustomerData {
   step0: {

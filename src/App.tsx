@@ -28,6 +28,7 @@ const AnalyticsPage     = lazy(() => import('./pages/AnalyticsPage'));
 const CompliancePage    = lazy(() => import('./pages/CompliancePage'));
 const SettingsPage      = lazy(() => import('./pages/SettingsPage'));
 const ProfilePage       = lazy(() => import('./pages/ProfilePage'));
+const PolicyAssistantPage = lazy(() => import('./pages/PolicyAssistantPage'));
 
 function PageLoader() {
   return (
@@ -131,6 +132,7 @@ export function App() {
       case 'compliance':         return <CompliancePage />;
       case 'settings':           return <SettingsPage />;
       case 'profile':            return <ProfilePage />;
+      case 'policy-assistant':   return <PolicyAssistantPage />;
       default:
         return tenant?.role === 'owner'
           ? <OwnerDashboard onNavigate={navigate} />
