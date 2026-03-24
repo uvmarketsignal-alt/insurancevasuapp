@@ -25,7 +25,8 @@ export default function CustomersPage({ onNavigate }: Props) {
   const { customers, tenant, updateCustomer, deleteCustomer, addAuditLog, employees } = useStore();
   const employeeId = tenant?.role === 'employee' 
     ? employees.find(e => e.email === tenant.email)?.id 
-    : tenant?.id;
+    : undefined; // owners see all customers; no ID-based filter needed
+  const user_name = tenant ? `${tenant.name} (${tenant.role})` : '';
   const [search, setSearch]               = useState('');
   const [statusFilter, setStatusFilter]   = useState('all');
   const [selectedId, setSelectedId]       = useState<string | null>(null);
@@ -118,7 +119,7 @@ export default function CustomersPage({ onNavigate }: Props) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `${customer.full_name.replace(/\s+/g, '_')}.csv`; a.click();
     URL.revokeObjectURL(url);
-    await addAuditLog({ tenant_id: tenant.id, action: 'export', entity_type: 'customer', entity_id: customer.id });
+    await addAuditLog({ tenant_id: tenant.id, user_name, action: 'EXPORT_CUSTOMER', entity_type: 'customer', entity_id: customer.id, new_values: `Exported: ${customer.full_name}` });
   };
 
   const saveCurrentSearch = () => {

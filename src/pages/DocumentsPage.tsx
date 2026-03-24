@@ -8,6 +8,7 @@ import { cn } from '../utils/cn';
 
 export default function DocumentsPage() {
   const { documents, customers, tenant } = useStore();
+  const user_name = tenant ? `${tenant.name} (${tenant.role})` : '';
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [selectedDocuments, setSelectedDocuments] = useState<Array<any>>([]);
@@ -66,7 +67,8 @@ export default function DocumentsPage() {
     if (tenant) {
       useStore.getState().addAuditLog({
         tenant_id: tenant.id,
-        action: 'download',
+        user_name,
+        action: 'DOWNLOAD_DOCUMENT',
         entity_type: 'document',
         entity_id: docId,
         new_values: `File: ${doc.file_name}, Size: ${getFileSize(doc.file_size)}`

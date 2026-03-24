@@ -18,8 +18,8 @@ export default function LeadsPage() {
     e.preventDefault();
     if (!tenant) return;
 
-    const employeeId = tenant.role === 'employee' 
-      ? employees.find(emp => emp.email === tenant.email)?.id 
+    const employeeId = tenant.role === 'employee'
+      ? employees.find(emp => emp.email.toLowerCase() === tenant.email.toLowerCase())?.id
       : undefined;
 
     await addLead({ ...form, tenant_id: tenant.id, status: 'New', assigned_to: employeeId || '' });

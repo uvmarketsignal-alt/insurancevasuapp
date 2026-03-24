@@ -14,9 +14,9 @@ export default function AuditLogsPage() {
 
   const filteredLogs = auditLogs.filter(log => {
     const matchesSearch = log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         log.entity_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (log.user_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         log.entity_id?.toLowerCase().includes(searchQuery.toLowerCase());
+      log.entity_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (log.user_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.entity_id?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesAction = actionFilter === 'all' || log.action === actionFilter;
     return matchesSearch && matchesAction;
   });
@@ -26,7 +26,7 @@ export default function AuditLogsPage() {
       ['Timestamp', 'Performed By', 'Action', 'Entity Type', 'Entity ID', 'Old Values', 'New Values'].join(','),
       ...filteredLogs.map(log => [
         `"${format(new Date(log.created_at), 'yyyy-MM-dd HH:mm:ss')}"`,
-        `"${log.user_name || ''}",`,
+        `"${log.user_name || ''}"`,
         `"${log.action}"`,
         `"${log.entity_type}"`,
         `"${log.entity_id || ''}"`,

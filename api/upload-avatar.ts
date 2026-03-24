@@ -16,15 +16,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  const ALLOWED_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
   const body = req.body as { filename?: string; contentType?: string; data?: string };
   const filename = body.filename || 'avatar.jpg';
-  const contentType = body.contentType || 'image/jpeg';
-  const data = body.data;
+  const requestedContentType = body.contentType || 'image/jpeg';
+  if (!ALLOWED_CONTENT_TYPES.includes(requestedContentType)) {
+    return res.status(400).json({ error: 'Invalid content type' });
+  }
+  const contentType = requestedContentType;
+  const BASE64_REGEX = /^[A-Za-z0-9+/]*={0,2}$/;
 
-  if (!data || typeof data !== 'string') {
-    return res.status(400).json({ error: 'data (base64) required' });
+  if (!BASE64_REGEX.test(data)) {
+    return res.status(400).json({ error: 'Invalid base64' });
   }
 
+  let buffer: Buffer;
+  buffer = Buffer.from(data, 'base64');
   let buffer: Buffer;
   try {
     buffer = Buffer.from(data, 'base64');

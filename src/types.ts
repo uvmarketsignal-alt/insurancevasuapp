@@ -140,8 +140,7 @@ export interface Document {
 export interface AuditLog {
   id: string;
   tenant_id: string;
-  employee_name?: string;
-  created_by?: string;
+  created_by_id?: string;
   action: string;
   entity_type: string;
   entity_id?: string;

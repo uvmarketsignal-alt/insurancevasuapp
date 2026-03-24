@@ -9,6 +9,12 @@ export default function CommissionsPage() {
   const [filter, setFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
 
   const employeeId = tenant?.role === 'employee' ? employees.find(e => e.email === tenant.email)?.id : null;
+
+  if (tenant?.role === 'employee' && !employeeId) {
+    // Could log a warning or show a user-facing message
+    console.warn('Employee record not found for current user');
+  }
+
   const baseCommissions = tenant?.role === 'owner' ? commissions : commissions.filter(c => c.employee_id === employeeId);
 
   const filtered = baseCommissions.filter(c => {
