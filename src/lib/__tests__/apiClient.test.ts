@@ -104,20 +104,20 @@ describe('client api.ts', () => {
   it('pushSnapshot should return false when sync disabled and true/false on fetch outcomes', async () => {
     setEnv({ VITE_SYNC_SECRET: undefined, VITE_API_URL: 'https://example.com' });
     const api = await loadApiModule();
-    expect(await api.pushSnapshot('t1', { x: 1 })).toBe(false);
+    expect(await api.pushSnapshot('t1', { x: 1 } as any)).toBe(false);
 
     setEnv({ VITE_SYNC_SECRET: 'sync_secret', VITE_API_URL: 'https://example.com' });
     const api2 = await loadApiModule();
     const fetchMock = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
 
     fetchMock.mockResolvedValueOnce(new Response('', { status: 500 }));
-    expect(await api2.pushSnapshot('t1', { x: 1 })).toBe(false);
+    expect(await api2.pushSnapshot('t1', { x: 1 } as any)).toBe(false);
 
     fetchMock.mockResolvedValueOnce(new Response('', { status: 200 }));
-    expect(await api2.pushSnapshot('t1', { x: 1 })).toBe(true);
+    expect(await api2.pushSnapshot('t1', { x: 1 } as any)).toBe(true);
 
     fetchMock.mockRejectedValueOnce(new Error('network'));
-    expect(await api2.pushSnapshot('t1', { x: 1 })).toBe(false);
+    expect(await api2.pushSnapshot('t1', { x: 1 } as any)).toBe(false);
   });
 
   it('reviveValue should revive dates, arrays, and objects recursively', async () => {

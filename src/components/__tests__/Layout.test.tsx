@@ -120,7 +120,7 @@ describe('Layout component', () => {
     );
 
     // unreadCount > 0 renders badge
-    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeDefined();
 
     fireEvent.click(screen.getByTitle('Global Search (Ctrl+K)'));
     expect(onSearchToggle).toHaveBeenCalled();
@@ -223,7 +223,7 @@ describe('Layout component', () => {
       </Layout>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeDefined();
 
     // Quick action camera button navigates to new-customer for employee tenant.
     const cameraSvg = document.querySelector('svg[data-icon="Camera"]');

@@ -6,7 +6,24 @@ import { format, differenceInDays } from 'date-fns';
 import { renewalSla, slaClass } from '../utils/sla';
 
 export default function RenewalsPage() {
-  const { renewals, processRenewal, addRenewal, tenant, policies } = useStore();
+  const { renewals, processRenewal, addRenewal, tenant, policies, customers } = useStore();
+
+  const handleProcess = async (renewal: any) => {
+    await processRenewal(renewal.id);
+    
+    const policy = policies.find((p: any) => p.id === renewal.policy_id);
+    const customer = customers.find((c: any) => c.id === policy?.customer_id);
+
+    if (customer && customer.phone) {
+      const formattedDate = format(new Date(renewal.renewal_date), 'dd MMM yyyy');
+      const policyDetails = `${policy?.insurer || ''} ${policy?.policy_type || 'Policy'} (${policy?.policy_number || ''})`.trim();
+      const message = `Dear ${customer.full_name},\n\nThis is a gentle reminder that your ${policyDetails} is due for renewal on ${formattedDate}.\n\nPlease let us know how you would like to proceed with the renewal to ensure your coverage remains uninterrupted. We are here to assist you with the process.\n\nBest regards,\nUV Insurance Team`;
+      const encodedMessage = encodeURIComponent(message);
+      const phone = customer.phone.replace(/\D/g, '');
+      
+      window.open(`https://wa.me/${phone}?text=${encodedMessage}`, '_blank');
+    }
+  };
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ policy_id: '', renewal_type: 'date' as 'date' | 'monthly', renewal_date: '', renewal_month: '1', renewal_day: '1' });
 
@@ -108,7 +125,7 @@ export default function RenewalsPage() {
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-medium bg-${urgency.color}-100 text-${urgency.color}-700`}>{urgency.label}</span>
                 {!renewal.processed && tenant?.role === 'owner' && (
-                  <button onClick={() => processRenewal(renewal.id)} className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-all">
+                  <button onClick={() => handleProcess(renewal)} className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-all">
                     Process
                   </button>
                 )}
