@@ -1,4 +1,5 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { useStore } from './store';
 import type { Page } from './types';
 import Login from './components/Login';
@@ -147,6 +148,7 @@ export function App() {
         {showCommandPalette && (
           <CommandPalette onClose={() => setShowCommandPalette(false)} onNavigate={navigate} />
         )}
+        <Analytics />
       </div>
     );
   }
@@ -177,6 +179,7 @@ export function App() {
         />
       )}
       <InstallButton position="floating" />
+      <Analytics />
     </div>
   );
 }
