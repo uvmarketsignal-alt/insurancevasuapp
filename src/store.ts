@@ -774,7 +774,7 @@ export const useStore = create<AppState>()(
               action: 'LOGIN',
               entity_type: 'auth',
               new_values: `Successful login`,
-              ip_address: '192.168.1.1',
+              // IP is not directly accessible client-side; real IP is captured server-side
             });
 
             return true;
@@ -1400,6 +1400,7 @@ export const useStore = create<AppState>()(
           entity_id: employee.id,
           new_values: `Added employee: ${employee.profile.full_name}`,
         });
+        syncToServer(get);
       },
 
       updateEmployee: async (id, tenantUpdates, profileUpdates) => {
@@ -1428,6 +1429,7 @@ export const useStore = create<AppState>()(
           entity_id: id,
           new_values: JSON.stringify({ ...tenantUpdates, ...profileUpdates }),
         });
+        syncToServer(get);
       },
 
       toggleEmployeeStatus: async (id) => {
@@ -1449,6 +1451,7 @@ export const useStore = create<AppState>()(
           entity_id: id,
           new_values: newActive ? 'Activated' : 'Deactivated',
         });
+        syncToServer(get);
       },
 
       // ── UTILITY ───────────────────────────────────────────────────────────

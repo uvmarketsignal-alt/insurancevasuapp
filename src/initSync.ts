@@ -19,7 +19,11 @@ function buildPayload(state: ReturnType<typeof useStore.getState>) {
     familyMembers: state.familyMembers,
     endorsements: state.endorsements,
     complianceReports: state.complianceReports,
-    employees: state.employees,
+    // Strip passwords before persisting to server (matches syncToServer in store.ts)
+    employees: state.employees.map(e => ({
+      ...e,
+      password: undefined,
+    })),
   };
 }
 

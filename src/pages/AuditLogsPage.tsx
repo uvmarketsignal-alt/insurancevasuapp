@@ -15,6 +15,7 @@ export default function AuditLogsPage() {
   const filteredLogs = auditLogs.filter(log => {
     const matchesSearch = log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          log.entity_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (log.user_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                          log.entity_id?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesAction = actionFilter === 'all' || log.action === actionFilter;
     return matchesSearch && matchesAction;
@@ -22,14 +23,15 @@ export default function AuditLogsPage() {
 
   const handleExport = () => {
     const csvContent = [
-      ['Timestamp', 'Action', 'Entity Type', 'Entity ID', 'Old Values', 'New Values'].join(','),
+      ['Timestamp', 'Performed By', 'Action', 'Entity Type', 'Entity ID', 'Old Values', 'New Values'].join(','),
       ...filteredLogs.map(log => [
         `"${format(new Date(log.created_at), 'yyyy-MM-dd HH:mm:ss')}"`,
+        `"${log.user_name || ''}",`,
         `"${log.action}"`,
         `"${log.entity_type}"`,
         `"${log.entity_id || ''}"`,
         `"${log.old_values || ''}"`,
-        `"${log.new_values || ''}"`
+        `"${log.new_values || ''}"`,
       ].join(','))
     ].join('\n');
 
@@ -107,6 +109,9 @@ export default function AuditLogsPage() {
                   Timestamp
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Performed By
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Action
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
@@ -126,6 +131,11 @@ export default function AuditLogsPage() {
                   <tr key={log.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                       {format(new Date(log.created_at), 'MMM dd, yyyy HH:mm')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm font-medium text-slate-700">
+                        {log.user_name || '—'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
@@ -150,7 +160,7 @@ export default function AuditLogsPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
                     No audit logs found matching your criteria
                   </td>
                 </tr>
@@ -182,6 +192,10 @@ export default function AuditLogsPage() {
                       <p className="text-sm text-slate-900">
                         {format(new Date(log.created_at), 'PPpp')}
                       </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Performed By</label>
+                      <p className="text-sm text-slate-900">{log.user_name || '—'}</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Action</label>
