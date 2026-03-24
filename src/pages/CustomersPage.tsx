@@ -22,7 +22,10 @@ const STATUS_CONFIG = {
 };
 
 export default function CustomersPage({ onNavigate }: Props) {
-  const { customers, tenant, updateCustomer, deleteCustomer, addAuditLog } = useStore();
+  const { customers, tenant, updateCustomer, deleteCustomer, addAuditLog, employees } = useStore();
+  const employeeId = tenant?.role === 'employee' 
+    ? employees.find(e => e.email === tenant.email)?.id 
+    : tenant?.id;
   const [search, setSearch]               = useState('');
   const [statusFilter, setStatusFilter]   = useState('all');
   const [selectedId, setSelectedId]       = useState<string | null>(null);
@@ -49,7 +52,7 @@ export default function CustomersPage({ onNavigate }: Props) {
     const q = search.toLowerCase();
     const matchSearch = !q || c.full_name.toLowerCase().includes(q) || c.phone.includes(q) || c.email?.toLowerCase().includes(q);
     const matchStatus = statusFilter === 'all' || c.status === statusFilter;
-    if (tenant?.role === 'employee' && c.assigned_to !== tenant.id) return false;
+    if (tenant?.role === 'employee' && c.assigned_to !== employeeId) return false;
     return matchSearch && matchStatus;
   });
 

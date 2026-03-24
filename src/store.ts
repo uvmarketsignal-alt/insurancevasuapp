@@ -2,8 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { hashPassword, validatePasswordStrength, verifyPassword } from './utils/password';
 import { sanitizeEmail, sanitizeNumeric, sanitizePhone, sanitizeText } from './utils/security';
-import { fetchSnapshot, isServerSyncEnabled, postWhatsAppSend } from './lib/api';
+import { fetchSnapshot, isServerSyncEnabled, postWhatsAppSend, debouncedPushSnapshot } from './lib/api';
 import { reviveDeep } from './lib/reviveDates';
+import { dbService } from './lib/db-service';
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -326,16 +327,16 @@ const DEMO_TENANTS: Tenant[] = [
 ];
 
 const SAMPLE_CUSTOMERS: Customer[] = [
-  { id: 'cus_001', tenant_id: 'tenant_001', full_name: 'Rajesh Kumar', phone: '+919876543220', email: 'rajesh@example.com', date_of_birth: new Date('1985-03-15'), gender: 'Male', occupation: 'Business', annual_income: 800000, address: '123 MG Road, Bangalore', status: 'approved', assigned_to: 'tenant_002', risk_score: 35, created_at: new Date('2024-01-10'), updated_at: new Date() },
-  { id: 'cus_002', tenant_id: 'tenant_001', full_name: 'Priya Sharma', phone: '+919876543221', email: 'priya@example.com', date_of_birth: new Date('1990-07-22'), gender: 'Female', occupation: 'Software Engineer', annual_income: 1200000, address: '456 Brigade Road, Bangalore', status: 'pending', assigned_to: 'tenant_002', risk_score: 25, created_at: new Date('2024-01-11'), updated_at: new Date() },
-  { id: 'cus_003', tenant_id: 'tenant_001', full_name: 'Mohammed Farhan', phone: '+919876543222', email: 'farhan@example.com', date_of_birth: new Date('1978-11-30'), gender: 'Male', occupation: 'Doctor', annual_income: 2500000, address: '789 Koramangala, Bangalore', status: 'approved', assigned_to: 'tenant_003', risk_score: 20, created_at: new Date('2024-01-12'), updated_at: new Date() },
-  { id: 'cus_004', tenant_id: 'tenant_001', full_name: 'Lakshmi Devi', phone: '+919876543223', email: 'lakshmi@example.com', date_of_birth: new Date('1992-05-18'), gender: 'Female', occupation: 'Teacher', annual_income: 450000, address: '321 Indiranagar, Bangalore', status: 'pending', assigned_to: 'tenant_002', risk_score: 45, created_at: new Date('2024-01-13'), updated_at: new Date() },
-  { id: 'cus_005', tenant_id: 'tenant_001', full_name: 'Arjun Nair', phone: '+919876543224', email: 'arjun@example.com', date_of_birth: new Date('1988-09-25'), gender: 'Male', occupation: 'Engineer', annual_income: 950000, address: '654 HSR Layout, Bangalore', status: 'approved', assigned_to: 'tenant_003', risk_score: 30, created_at: new Date('2024-01-14'), updated_at: new Date() },
-  { id: 'cus_006', tenant_id: 'tenant_001', full_name: 'Kavitha Reddy', phone: '+919876543225', email: 'kavitha@example.com', date_of_birth: new Date('1995-12-10'), gender: 'Female', occupation: 'Entrepreneur', annual_income: 600000, address: '987 Whitefield, Bangalore', status: 'rejected', assigned_to: 'tenant_002', risk_score: 65, created_at: new Date('2024-01-15'), updated_at: new Date() },
-  { id: 'cus_007', tenant_id: 'tenant_001', full_name: 'Suresh Babu', phone: '+919876543226', email: 'suresh@example.com', date_of_birth: new Date('1975-04-08'), gender: 'Male', occupation: 'Retired', annual_income: 300000, address: '111 Jayanagar, Bangalore', status: 'changes_requested', assigned_to: 'tenant_003', risk_score: 55, created_at: new Date('2024-01-16'), updated_at: new Date() },
-  { id: 'cus_008', tenant_id: 'tenant_001', full_name: 'Anitha Pillai', phone: '+919876543227', email: 'anitha@example.com', date_of_birth: new Date('1983-08-14'), gender: 'Female', occupation: 'Nurse', annual_income: 380000, address: '222 JP Nagar, Bangalore', status: 'approved', assigned_to: 'tenant_002', risk_score: 40, created_at: new Date('2024-01-17'), updated_at: new Date() },
-  { id: 'cus_009', tenant_id: 'tenant_001', full_name: 'Ramesh Chandra', phone: '+919876543228', email: 'ramesh@example.com', date_of_birth: new Date('1970-01-20'), gender: 'Male', occupation: 'Farmer', annual_income: 180000, address: '333 Electronic City, Bangalore', status: 'pending', assigned_to: 'tenant_003', risk_score: 70, created_at: new Date('2024-01-18'), updated_at: new Date() },
-  { id: 'cus_010', tenant_id: 'tenant_001', full_name: 'Deepa Menon', phone: '+919876543229', email: 'deepa@example.com', date_of_birth: new Date('1987-06-30'), gender: 'Female', occupation: 'CA', annual_income: 1500000, address: '444 Marathahalli, Bangalore', status: 'approved', assigned_to: 'tenant_002', risk_score: 15, created_at: new Date('2024-01-19'), updated_at: new Date() },
+  { id: 'cus_001', tenant_id: 'tenant_001', full_name: 'Rajesh Kumar', phone: '+919876543220', email: 'rajesh@example.com', date_of_birth: new Date('1985-03-15'), gender: 'Male', occupation: 'Business', annual_income: 800000, address: '123 MG Road, Bangalore', status: 'approved', assigned_to: 'emp_001', risk_score: 35, created_at: new Date('2024-01-10'), updated_at: new Date() },
+  { id: 'cus_002', tenant_id: 'tenant_001', full_name: 'Priya Sharma', phone: '+919876543221', email: 'priya@example.com', date_of_birth: new Date('1990-07-22'), gender: 'Female', occupation: 'Software Engineer', annual_income: 1200000, address: '456 Brigade Road, Bangalore', status: 'pending', assigned_to: 'emp_001', risk_score: 25, created_at: new Date('2024-01-11'), updated_at: new Date() },
+  { id: 'cus_003', tenant_id: 'tenant_001', full_name: 'Mohammed Farhan', phone: '+919876543222', email: 'farhan@example.com', date_of_birth: new Date('1978-11-30'), gender: 'Male', occupation: 'Doctor', annual_income: 2500000, address: '789 Koramangala, Bangalore', status: 'approved', assigned_to: 'emp_002', risk_score: 20, created_at: new Date('2024-01-12'), updated_at: new Date() },
+  { id: 'cus_004', tenant_id: 'tenant_001', full_name: 'Lakshmi Devi', phone: '+919876543223', email: 'lakshmi@example.com', date_of_birth: new Date('1992-05-18'), gender: 'Female', occupation: 'Teacher', annual_income: 450000, address: '321 Indiranagar, Bangalore', status: 'pending', assigned_to: 'emp_001', risk_score: 45, created_at: new Date('2024-01-13'), updated_at: new Date() },
+  { id: 'cus_005', tenant_id: 'tenant_001', full_name: 'Arjun Nair', phone: '+919876543224', email: 'arjun@example.com', date_of_birth: new Date('1988-09-25'), gender: 'Male', occupation: 'Engineer', annual_income: 950000, address: '654 HSR Layout, Bangalore', status: 'approved', assigned_to: 'emp_002', risk_score: 30, created_at: new Date('2024-01-14'), updated_at: new Date() },
+  { id: 'cus_006', tenant_id: 'tenant_001', full_name: 'Kavitha Reddy', phone: '+919876543225', email: 'kavitha@example.com', date_of_birth: new Date('1995-12-10'), gender: 'Female', occupation: 'Entrepreneur', annual_income: 600000, address: '987 Whitefield, Bangalore', status: 'rejected', assigned_to: 'emp_001', risk_score: 65, created_at: new Date('2024-01-15'), updated_at: new Date() },
+  { id: 'cus_007', tenant_id: 'tenant_001', full_name: 'Suresh Babu', phone: '+919876543226', email: 'suresh@example.com', date_of_birth: new Date('1975-04-08'), gender: 'Male', occupation: 'Retired', annual_income: 300000, address: '111 Jayanagar, Bangalore', status: 'changes_requested', assigned_to: 'emp_002', risk_score: 55, created_at: new Date('2024-01-16'), updated_at: new Date() },
+  { id: 'cus_008', tenant_id: 'tenant_001', full_name: 'Anitha Pillai', phone: '+919876543227', email: 'anitha@example.com', date_of_birth: new Date('1983-08-14'), gender: 'Female', occupation: 'Nurse', annual_income: 380000, address: '222 JP Nagar, Bangalore', status: 'approved', assigned_to: 'emp_001', risk_score: 40, created_at: new Date('2024-01-17'), updated_at: new Date() },
+  { id: 'cus_009', tenant_id: 'tenant_001', full_name: 'Ramesh Chandra', phone: '+919876543228', email: 'ramesh@example.com', date_of_birth: new Date('1970-01-20'), gender: 'Male', occupation: 'Farmer', annual_income: 180000, address: '333 Electronic City, Bangalore', status: 'pending', assigned_to: 'emp_002', risk_score: 70, created_at: new Date('2024-01-18'), updated_at: new Date() },
+  { id: 'cus_010', tenant_id: 'tenant_001', full_name: 'Deepa Menon', phone: '+919876543229', email: 'deepa@example.com', date_of_birth: new Date('1987-06-30'), gender: 'Female', occupation: 'CA', annual_income: 1500000, address: '444 Marathahalli, Bangalore', status: 'approved', assigned_to: 'emp_001', risk_score: 15, created_at: new Date('2024-01-19'), updated_at: new Date() },
 ];
 
 const SAMPLE_POLICIES: CustomerPolicy[] = [
@@ -355,11 +356,11 @@ const SAMPLE_CLAIMS: Claim[] = [
 ];
 
 const SAMPLE_LEADS: Lead[] = [
-  { id: 'led_001', tenant_id: 'tenant_001', full_name: 'Kiran Patel', phone: '+919876540001', email: 'kiran@example.com', source: 'Referral', policy_interest: 'health', status: 'New', assigned_to: 'tenant_002', notes: 'Interested in family health plan', next_followup: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), created_at: new Date('2024-10-01'), updated_at: new Date() },
-  { id: 'led_002', tenant_id: 'tenant_001', full_name: 'Suma Krishnan', phone: '+919876540002', email: 'suma@example.com', source: 'Walk-in', policy_interest: 'motor', status: 'Contacted', assigned_to: 'tenant_003', notes: 'Needs comprehensive motor cover', next_followup: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000), created_at: new Date('2024-10-02'), updated_at: new Date() },
-  { id: 'led_003', tenant_id: 'tenant_001', full_name: 'Ravi Shankar', phone: '+919876540003', email: 'ravi@example.com', source: 'Online', policy_interest: 'term', status: 'Meeting', assigned_to: 'tenant_002', notes: 'Meeting scheduled for term plan discussion', next_followup: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), created_at: new Date('2024-10-03'), updated_at: new Date() },
-  { id: 'led_004', tenant_id: 'tenant_001', full_name: 'Meena Iyer', phone: '+919876540004', email: 'meena@example.com', source: 'Social Media', policy_interest: 'life', status: 'Proposal', assigned_to: 'tenant_003', notes: 'Proposal sent, awaiting response', next_followup: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), created_at: new Date('2024-10-04'), updated_at: new Date() },
-  { id: 'led_005', tenant_id: 'tenant_001', full_name: 'Vijay Kumar', phone: '+919876540005', email: 'vijay@example.com', source: 'Referral', policy_interest: 'home', status: 'Closed', assigned_to: 'tenant_002', notes: 'Converted to customer', next_followup: undefined, created_at: new Date('2024-10-05'), updated_at: new Date() },
+  { id: 'led_001', tenant_id: 'tenant_001', full_name: 'Kiran Patel', phone: '+919876540001', email: 'kiran@example.com', source: 'Referral', policy_interest: 'health', status: 'New', assigned_to: 'emp_001', notes: 'Interested in family health plan', next_followup: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), created_at: new Date('2024-10-01'), updated_at: new Date() },
+  { id: 'led_002', tenant_id: 'tenant_001', full_name: 'Suma Krishnan', phone: '+919876540002', email: 'suma@example.com', source: 'Walk-in', policy_interest: 'motor', status: 'Contacted', assigned_to: 'emp_002', notes: 'Needs comprehensive motor cover', next_followup: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000), created_at: new Date('2024-10-02'), updated_at: new Date() },
+  { id: 'led_003', tenant_id: 'tenant_001', full_name: 'Ravi Shankar', phone: '+919876540003', email: 'ravi@example.com', source: 'Online', policy_interest: 'term', status: 'Meeting', assigned_to: 'emp_001', notes: 'Meeting scheduled for term plan discussion', next_followup: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), created_at: new Date('2024-10-03'), updated_at: new Date() },
+  { id: 'led_004', tenant_id: 'tenant_001', full_name: 'Meena Iyer', phone: '+919876540004', email: 'meena@example.com', source: 'Social Media', policy_interest: 'life', status: 'Proposal', assigned_to: 'emp_002', notes: 'Proposal sent, awaiting response', next_followup: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), created_at: new Date('2024-10-04'), updated_at: new Date() },
+  { id: 'led_005', tenant_id: 'tenant_001', full_name: 'Vijay Kumar', phone: '+919876540005', email: 'vijay@example.com', source: 'Referral', policy_interest: 'home', status: 'Closed', assigned_to: 'emp_001', notes: 'Converted to customer', next_followup: undefined, created_at: new Date('2024-10-05'), updated_at: new Date() },
 ];
 
 const SAMPLE_RENEWALS: Renewal[] = [
@@ -369,11 +370,11 @@ const SAMPLE_RENEWALS: Renewal[] = [
 ];
 
 const SAMPLE_COMMISSIONS: Commission[] = [
-  { id: 'com_001', policy_id: 'pol_001', tenant_id: 'tenant_001', employee_id: 'tenant_002', commission_rate: 5, commission_amount: 750, is_paid: true, paid_date: new Date('2024-02-01'), created_at: new Date('2024-01-01') },
-  { id: 'com_002', policy_id: 'pol_002', tenant_id: 'tenant_001', employee_id: 'tenant_002', commission_rate: 7, commission_amount: 1260, is_paid: true, paid_date: new Date('2024-03-01'), created_at: new Date('2024-02-01') },
-  { id: 'com_003', policy_id: 'pol_003', tenant_id: 'tenant_001', employee_id: 'tenant_003', commission_rate: 8, commission_amount: 3600, is_paid: false, created_at: new Date('2024-01-15') },
-  { id: 'com_004', policy_id: 'pol_004', tenant_id: 'tenant_001', employee_id: 'tenant_003', commission_rate: 6, commission_amount: 720, is_paid: false, created_at: new Date('2024-03-01') },
-  { id: 'com_005', policy_id: 'pol_005', tenant_id: 'tenant_001', employee_id: 'tenant_002', commission_rate: 5, commission_amount: 175, is_paid: true, paid_date: new Date('2024-07-01'), created_at: new Date('2024-06-01') },
+  { id: 'com_001', policy_id: 'pol_001', tenant_id: 'tenant_001', employee_id: 'emp_001', commission_rate: 5, commission_amount: 750, is_paid: true, paid_date: new Date('2024-02-01'), created_at: new Date('2024-01-01') },
+  { id: 'com_002', policy_id: 'pol_002', tenant_id: 'tenant_001', employee_id: 'emp_001', commission_rate: 7, commission_amount: 1260, is_paid: true, paid_date: new Date('2024-03-01'), created_at: new Date('2024-02-01') },
+  { id: 'com_003', policy_id: 'pol_003', tenant_id: 'tenant_001', employee_id: 'emp_002', commission_rate: 8, commission_amount: 3600, is_paid: false, created_at: new Date('2024-01-15') },
+  { id: 'com_004', policy_id: 'pol_004', tenant_id: 'tenant_001', employee_id: 'emp_002', commission_rate: 6, commission_amount: 720, is_paid: false, created_at: new Date('2024-03-01') },
+  { id: 'com_005', policy_id: 'pol_005', tenant_id: 'tenant_001', employee_id: 'emp_001', commission_rate: 5, commission_amount: 175, is_paid: true, paid_date: new Date('2024-07-01'), created_at: new Date('2024-06-01') },
 ];
 
 const SAMPLE_NOTIFICATIONS: Notification[] = [
@@ -627,6 +628,7 @@ interface AppState {
 
   // Employees
   addEmployee: (employee: Employee) => Promise<void>;
+  updateEmployee: (id: string, tenantUpdates: Partial<Pick<Tenant, 'name' | 'email'>>, profileUpdates: Partial<Profile>) => Promise<void>;
   toggleEmployeeStatus: (id: string) => Promise<void>;
 
   // Utility
@@ -643,7 +645,38 @@ interface AppState {
   checkRenewalNotifications: () => Promise<void>;
 }
 
+// ─── SYNC HELPER ───────────────────────────────────────────────────────────────
+// Reads current state from the Zustand getter and pushes a sanitised snapshot
+// to PostgreSQL via /api/sync. Passwords are stripped before sending.
+function syncToServer(get: () => AppState) {
+  const s = get();
+  if (!s.tenant?.id) return;
+  const snapshot = {
+    appSettings: s.appSettings,
+    customers: s.customers,
+    policies: s.policies,
+    documents: s.documents,
+    claims: s.claims,
+    leads: s.leads,
+    notifications: s.notifications,
+    knowledgeArticles: s.knowledgeArticles,
+    commissions: s.commissions,
+    renewals: s.renewals,
+    auditLogs: s.auditLogs,
+    familyMembers: s.familyMembers,
+    endorsements: s.endorsements,
+    complianceReports: s.complianceReports,
+    // Strip passwords before persisting to server
+    employees: s.employees.map(e => ({
+      ...e,
+      password: undefined,
+    })),
+  };
+  debouncedPushSnapshot(s.tenant.id, snapshot);
+}
+
 // ─── STORE ────────────────────────────────────────────────────────────────────
+
 
 export const useStore = create<AppState>()(
   persist(
@@ -844,7 +877,7 @@ export const useStore = create<AppState>()(
           entity_id: fullCustomer.id,
           new_values: `Customer: ${fullCustomer.full_name}, Phone: ${fullCustomer.phone}`,
         });
-
+        syncToServer(get);
         return fullCustomer;
       },
 
@@ -867,6 +900,7 @@ export const useStore = create<AppState>()(
           entity_id: id,
           new_values: JSON.stringify(sanitizedData),
         });
+        syncToServer(get);
       },
 
       deleteCustomer: async (id) => {
@@ -880,6 +914,7 @@ export const useStore = create<AppState>()(
           entity_id: id,
           old_values: `Customer: ${customer?.full_name}`,
         });
+        syncToServer(get);
       },
 
       approveCustomer: async (id) => {
@@ -907,6 +942,7 @@ export const useStore = create<AppState>()(
           old_values: 'status: pending',
           new_values: 'status: approved',
         });
+        syncToServer(get);
       },
 
       rejectCustomer: async (id, reason) => {
@@ -933,6 +969,7 @@ export const useStore = create<AppState>()(
           entity_id: id,
           new_values: `status: rejected, reason: ${reason}`,
         });
+        syncToServer(get);
       },
 
       requestChanges: async (id, reason) => {
@@ -959,6 +996,7 @@ export const useStore = create<AppState>()(
           entity_id: id,
           new_values: `Changes requested: ${reason}`,
         });
+        syncToServer(get);
       },
 
       // ── POLICIES ──────────────────────────────────────────────────────────
@@ -972,11 +1010,15 @@ export const useStore = create<AppState>()(
         const rate = rateMap[full.policy_type] || 5;
         const commAmount = (full.premium_amount || 0) * (rate / 100);
 
+        const employeeId = tenant?.role === 'employee' 
+          ? get().employees.find(e => e.email === tenant?.email)?.id 
+          : undefined;
+
         await get().addCommission({
           id: `comm_${Date.now()}`,
           policy_id: full.id,
           tenant_id: tenant?.id || '',
-          employee_id: tenant?.id || '',
+          employee_id: employeeId || '',
           commission_rate: rate,
           commission_amount: commAmount,
           is_paid: false,
@@ -1001,7 +1043,7 @@ export const useStore = create<AppState>()(
           entity_id: full.id,
           new_values: `${full.insurer}, ${full.policy_type}, ₹${full.sum_assured?.toLocaleString()}`,
         });
-
+        syncToServer(get);
         return full;
       },
 
@@ -1015,6 +1057,7 @@ export const useStore = create<AppState>()(
           entity_id: id,
           new_values: JSON.stringify(data),
         });
+        syncToServer(get);
       },
 
       // ── DOCUMENTS ─────────────────────────────────────────────────────────
@@ -1029,6 +1072,7 @@ export const useStore = create<AppState>()(
           entity_id: full.id,
           new_values: `${full.document_type} - ${full.file_name}`,
         });
+        syncToServer(get);
         return full;
       },
 
@@ -1041,6 +1085,7 @@ export const useStore = create<AppState>()(
           entity_type: 'document',
           entity_id: id,
         });
+        syncToServer(get);
       },
 
       // ── CLAIMS ────────────────────────────────────────────────────────────
@@ -1068,6 +1113,7 @@ export const useStore = create<AppState>()(
           entity_id: claim.id,
           new_values: `${claim.claim_number}, ${claim.claim_type}, ₹${claim.claim_amount}`,
         });
+        syncToServer(get);
       },
 
       updateClaimStatus: async (id, status) => {
@@ -1080,6 +1126,7 @@ export const useStore = create<AppState>()(
           entity_id: id,
           new_values: `status: ${status}`,
         });
+        syncToServer(get);
       },
 
       // ── LEADS ─────────────────────────────────────────────────────────────
@@ -1095,6 +1142,7 @@ export const useStore = create<AppState>()(
           entity_id: lead.id,
           new_values: `${lead.full_name}, ${lead.phone}, Interest: ${lead.policy_interest}`,
         });
+        syncToServer(get);
       },
 
       updateLeadStage: async (id, status) => {
@@ -1107,11 +1155,13 @@ export const useStore = create<AppState>()(
           entity_id: id,
           new_values: `status: ${status}`,
         });
+        syncToServer(get);
       },
 
       updateLead: async (id, data) => {
         const { leads } = get();
         set({ leads: leads.map(l => l.id === id ? { ...l, ...data, updated_at: new Date() } : l) });
+        syncToServer(get);
       },
 
       deleteLead: async (id) => {
@@ -1123,6 +1173,7 @@ export const useStore = create<AppState>()(
           entity_type: 'lead',
           entity_id: id,
         });
+        syncToServer(get);
       },
 
       // ── NOTIFICATIONS ─────────────────────────────────────────────────────
@@ -1130,16 +1181,19 @@ export const useStore = create<AppState>()(
         const { notifications } = get();
         const newNotif: Notification = { is_read: false, created_at: new Date(), ...notif, id: `notif_${Date.now()}_${Math.random()}` } as Notification;
         set({ notifications: [newNotif, ...notifications].slice(0, 100) });
+        syncToServer(get);
       },
 
       markNotificationRead: (id) => {
         const { notifications } = get();
         set({ notifications: notifications.map(n => n.id === id ? { ...n, is_read: true } : n) });
+        syncToServer(get);
       },
 
       markAllNotificationsRead: () => {
         const { notifications } = get();
         set({ notifications: notifications.map(n => ({ ...n, is_read: true })) });
+        syncToServer(get);
       },
 
       // ── COMMISSIONS ───────────────────────────────────────────────────────
@@ -1147,6 +1201,7 @@ export const useStore = create<AppState>()(
         const { commissions } = get();
         const full = { id: `com_${Date.now()}`, is_paid: false, created_at: new Date(), ...commission } as Commission;
         set({ commissions: [...commissions, full] });
+        syncToServer(get);
       },
 
       payCommission: async (id) => {
@@ -1160,6 +1215,7 @@ export const useStore = create<AppState>()(
           entity_id: id,
           new_values: `₹${comm?.commission_amount} paid`,
         });
+        syncToServer(get);
       },
 
       // ── RENEWALS ──────────────────────────────────────────────────────────
@@ -1167,6 +1223,7 @@ export const useStore = create<AppState>()(
         const { renewals } = get();
         const full = { id: `ren_${Date.now()}`, notified: false, processed: false, created_at: new Date(), ...renewal } as Renewal;
         set({ renewals: [...renewals, full] });
+        syncToServer(get);
       },
 
       processRenewal: async (id) => {
@@ -1179,6 +1236,7 @@ export const useStore = create<AppState>()(
           entity_id: id,
           new_values: 'Renewal processed',
         });
+        syncToServer(get);
       },
 
       // ── AUDIT LOGS ────────────────────────────────────────────────────────
@@ -1191,6 +1249,8 @@ export const useStore = create<AppState>()(
           created_at: new Date(),
         };
         set({ auditLogs: [newLog, ...auditLogs].slice(0, 500) });
+        // Sync audit logs too so owner can see them from any device/session
+        syncToServer(get);
       },
 
       // ── FAMILY MEMBERS ────────────────────────────────────────────────────
@@ -1198,11 +1258,13 @@ export const useStore = create<AppState>()(
         const { familyMembers } = get();
         const full = { id: `fam_${Date.now()}`, created_at: new Date(), ...member } as FamilyMember;
         set({ familyMembers: [...familyMembers, full] });
+        syncToServer(get);
       },
 
       deleteFamilyMember: async (id) => {
         const { familyMembers } = get();
         set({ familyMembers: familyMembers.filter(m => m.id !== id) });
+        syncToServer(get);
       },
 
       // ── ENDORSEMENTS ──────────────────────────────────────────────────────
@@ -1210,16 +1272,24 @@ export const useStore = create<AppState>()(
         const { endorsements } = get();
         const full = { id: `end_${Date.now()}`, created_at: new Date(), ...endorsement } as Endorsement;
         set({ endorsements: [...endorsements, full] });
+        syncToServer(get);
       },
 
       approveEndorsement: async (id) => {
-        const { endorsements, tenant } = get();
-        set({ endorsements: endorsements.map(e => e.id === id ? { ...e, status: 'approved', approved_by: tenant?.id, approved_at: new Date() } : e) });
+        const { endorsements, tenant, employees } = get();
+        const employeeId = tenant?.role === 'employee' 
+          ? employees.find(e => e.email === tenant.email)?.id 
+          : null;
+        const approverId = employeeId || tenant?.id;
+
+        set({ endorsements: endorsements.map(e => e.id === id ? { ...e, status: 'approved', approved_by: approverId, approved_at: new Date() } : e) });
+        syncToServer(get);
       },
 
       rejectEndorsement: async (id) => {
         const { endorsements } = get();
         set({ endorsements: endorsements.map(e => e.id === id ? { ...e, status: 'rejected' } : e) });
+        syncToServer(get);
       },
 
       // ── COMPLIANCE ────────────────────────────────────────────────────────
@@ -1228,11 +1298,13 @@ export const useStore = create<AppState>()(
         const now = new Date();
         const full = { id: `comp_${Date.now()}`, created_at: now, ...report } as ComplianceReport;
         set({ complianceReports: [...complianceReports, full] });
+        syncToServer(get);
       },
 
       updateComplianceReport: async (id, data) => {
         const { complianceReports } = get();
         set({ complianceReports: complianceReports.map(r => r.id === id ? { ...r, ...data } : r) });
+        syncToServer(get);
       },
 
       // ── KNOWLEDGE BASE ────────────────────────────────────────────────────
@@ -1241,11 +1313,13 @@ export const useStore = create<AppState>()(
         const now = new Date();
         const full = { id: `kb_${Date.now()}`, created_at: now, updated_at: now, view_count: 0, is_published: true, ...article } as KnowledgeArticle;
         set({ knowledgeArticles: [...knowledgeArticles, full] });
+        syncToServer(get);
       },
 
       updateKnowledgeArticle: async (id, data) => {
         const { knowledgeArticles } = get();
         set({ knowledgeArticles: knowledgeArticles.map(a => a.id === id ? { ...a, ...data, updated_at: new Date() } : a) });
+        syncToServer(get);
       },
 
       // ── SETTINGS & PROFILE ────────────────────────────────────────────────
@@ -1258,6 +1332,7 @@ export const useStore = create<AppState>()(
           entity_type: 'settings',
           new_values: JSON.stringify(settings),
         });
+        syncToServer(get);
       },
 
       updatePassword: async (oldPassword, newPassword) => {
@@ -1266,7 +1341,15 @@ export const useStore = create<AppState>()(
         if (!verifyPassword(oldPassword, tenant.password)) return { success: false, error: 'Current password is incorrect' };
         const strength = validatePasswordStrength(newPassword);
         if (!strength.valid) return { success: false, error: strength.errors[0] || 'Password is weak' };
-        set({ tenant: { ...tenant, password: hashPassword(newPassword), updated_at: new Date() } });
+        const hashed = hashPassword(newPassword);
+        set({ tenant: { ...tenant, password: hashed, updated_at: new Date() } });
+        // Persist hashed password to DB
+        try {
+          await dbService.updateTenantPassword(tenant.id, hashed);
+        } catch (err) {
+          console.error('updatePassword DB error:', err);
+        }
+        syncToServer(get);
         return { success: true };
       },
 
@@ -1274,18 +1357,98 @@ export const useStore = create<AppState>()(
         const { profile } = get();
         if (profile) {
           set({ profile: { ...profile, ...profileData, updated_at: new Date() } });
+          // Persist profile to DB
+          try {
+            await dbService.updateProfile(profile.tenant_id, profileData);
+          } catch (err) {
+            console.error('updateProfile DB error:', err);
+          }
+          syncToServer(get);
         }
       },
 
       // ── EMPLOYEES ─────────────────────────────────────────────────────────
       addEmployee: async (employee) => {
-        const { employees } = get();
+        const { employees, tenant } = get();
         set({ employees: [...employees, employee] });
+        // Persist to PostgreSQL
+        try {
+          await dbService.createEmployee({
+            name: employee.email.split('@')[0],
+            email: employee.email,
+            password: (employee as any).password || 'ChangeMe@123',
+            role: 'employee',
+            is_active: employee.is_active,
+            profile: {
+              full_name: employee.profile.full_name,
+              phone: employee.profile.phone || '',
+              avatar_url: employee.profile.avatar_url,
+              employee_code: employee.profile.employee_code || '',
+              department: employee.profile.department || '',
+              join_date: employee.profile.join_date || new Date(),
+              is_active: true,
+            }
+          });
+          console.log('✅ Employee persisted to DB');
+        } catch (err) {
+          console.error('addEmployee DB error:', err);
+        }
+        get().addAuditLog({
+          user_name: `${tenant?.name} (${tenant?.role})`,
+          action: 'ADD_EMPLOYEE',
+          entity_type: 'employee',
+          entity_id: employee.id,
+          new_values: `Added employee: ${employee.profile.full_name}`,
+        });
+      },
+
+      updateEmployee: async (id, tenantUpdates, profileUpdates) => {
+        const { employees, tenant } = get();
+        set({
+          employees: employees.map(e => {
+            if (e.id !== id) return e;
+            return {
+              ...e,
+              ...(tenantUpdates.email ? { email: tenantUpdates.email } : {}),
+              profile: { ...e.profile, ...profileUpdates, updated_at: new Date() }
+            };
+          })
+        });
+        // Persist to PostgreSQL
+        try {
+          await dbService.updateEmployee(id, tenantUpdates, profileUpdates);
+          console.log('✅ Employee updated in DB');
+        } catch (err) {
+          console.error('updateEmployee DB error:', err);
+        }
+        get().addAuditLog({
+          user_name: `${tenant?.name} (${tenant?.role})`,
+          action: 'UPDATE_EMPLOYEE',
+          entity_type: 'employee',
+          entity_id: id,
+          new_values: JSON.stringify({ ...tenantUpdates, ...profileUpdates }),
+        });
       },
 
       toggleEmployeeStatus: async (id) => {
-        const { employees } = get();
-        set({ employees: employees.map(e => e.id === id ? { ...e, is_active: !e.is_active } : e) });
+        const { employees, tenant } = get();
+        const emp = employees.find(e => e.id === id);
+        const newActive = !emp?.is_active;
+        set({ employees: employees.map(e => e.id === id ? { ...e, is_active: newActive } : e) });
+        // Persist to PostgreSQL
+        try {
+          await dbService.toggleEmployeeStatus(id, newActive);
+          console.log('✅ Employee status updated in DB');
+        } catch (err) {
+          console.error('toggleEmployeeStatus DB error:', err);
+        }
+        get().addAuditLog({
+          user_name: `${tenant?.name} (${tenant?.role})`,
+          action: newActive ? 'ACTIVATE_EMPLOYEE' : 'DEACTIVATE_EMPLOYEE',
+          entity_type: 'employee',
+          entity_id: id,
+          new_values: newActive ? 'Activated' : 'Deactivated',
+        });
       },
 
       // ── UTILITY ───────────────────────────────────────────────────────────

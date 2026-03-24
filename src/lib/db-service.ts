@@ -578,6 +578,25 @@ export class DatabaseService {
     }) as Promise<Tenant>;
   }
 
+  async updateEmployee(
+    tenantId: string,
+    tenantUpdates: Partial<Pick<Tenant, 'name' | 'email' | 'password'>>,
+    profileUpdates: Partial<Profile>
+  ): Promise<void> {
+    if (Object.keys(tenantUpdates).length > 0) {
+      await prisma.tenants.update({
+        where: { id: tenantId },
+        data: { ...tenantUpdates, updated_at: new Date() }
+      });
+    }
+    if (Object.keys(profileUpdates).length > 0) {
+      await prisma.profiles.updateMany({
+        where: { tenant_id: tenantId },
+        data: { ...profileUpdates, updated_at: new Date() }
+      });
+    }
+  }
+
   // Database health check (Neon via Vercel /api/health — not in-browser)
   async healthCheck(): Promise<boolean> {
     try {

@@ -1087,7 +1087,7 @@ export default function NewCustomerPage({ onComplete }: NewCustomerPageProps) {
   const [submissionError, setSubmissionError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { newCustomerData, setNewCustomerStep, setNewCustomerData, clearNewCustomerData, addCustomer, addPolicy, addDocument, tenant } = useStore();
+  const { newCustomerData, setNewCustomerStep, setNewCustomerData, clearNewCustomerData, addCustomer, addPolicy, addDocument, tenant, employees } = useStore();
 
   const steps = [
     { title: 'Basic Info',       icon: User,         desc: 'Personal details' },
@@ -1132,6 +1132,10 @@ export default function NewCustomerPage({ onComplete }: NewCustomerPageProps) {
 
     try {
       // Build customer object
+      const employeeId = tenant.role === 'employee'
+        ? employees.find(emp => emp.email === tenant.email)?.id
+        : undefined;
+
       const customerData = {
         tenant_id: tenant.id,
         full_name: newCustomerData.step0?.full_name || '',
@@ -1143,7 +1147,7 @@ export default function NewCustomerPage({ onComplete }: NewCustomerPageProps) {
         annual_income: newCustomerData.step0?.annual_income ? parseFloat(newCustomerData.step0.annual_income) : undefined,
         address: newCustomerData.step0?.address,
         status: 'pending' as const,
-        assigned_to: tenant.role === 'employee' ? tenant.id : undefined,
+        assigned_to: employeeId,
       };
 
       const customer = await addCustomer(customerData);
@@ -1210,7 +1214,7 @@ export default function NewCustomerPage({ onComplete }: NewCustomerPageProps) {
           file_url: fileUrl,
           file_type: doc.file instanceof File ? doc.file.type : 'image/jpeg',
           file_size: doc.file instanceof File ? doc.file.size : 0,
-          uploaded_by: tenant.id,
+          uploaded_by: employeeId || tenant.id,
           is_camera_capture: doc.captured,
         });
       }

@@ -11,7 +11,10 @@ import type { Page } from '../types';
 interface Props { onNavigate: (page: Page) => void; }
 
 export default function EmployeeDashboard({ onNavigate }: Props) {
-  const { customers, claims, leads, commissions, loadInitialData, tenant } = useStore();
+  const { customers, claims, leads, commissions, loadInitialData, tenant, employees } = useStore();
+  const employeeId = tenant?.role === 'employee' 
+    ? employees.find(e => e.email === tenant.email)?.id 
+    : tenant?.id;
 
   const [stats, setStats] = useState({
     totalCustomers: 0, pendingCustomers: 0,
@@ -23,18 +26,18 @@ export default function EmployeeDashboard({ onNavigate }: Props) {
   }, [tenant?.id]);
 
   useEffect(() => {
-    const myCustomers = customers.filter(c => c.assigned_to === tenant?.id);
+    const myCustomers = customers.filter(c => c.assigned_to === employeeId);
     setStats({
       totalCustomers: myCustomers.length,
       pendingCustomers: myCustomers.filter(c => c.status === 'pending').length,
       activeClaims: claims.filter(c => c.status !== 'Closed').length,
-      totalCommission: commissions.filter(c => c.employee_id === tenant?.id && c.is_paid)
+      totalCommission: commissions.filter(c => c.employee_id === employeeId && c.is_paid)
         .reduce((s, c) => s + Number(c.commission_amount), 0),
-      activeLeads: leads.filter(l => l.assigned_to === tenant?.id && l.status !== 'Closed').length,
+      activeLeads: leads.filter(l => l.assigned_to === employeeId && l.status !== 'Closed').length,
     });
-  }, [customers, commissions, claims, leads, tenant]);
+  }, [customers, commissions, claims, leads, employeeId]);
 
-  const recentCustomers = customers.filter(c => c.assigned_to === tenant?.id).slice(0, 5);
+  const recentCustomers = customers.filter(c => c.assigned_to === employeeId).slice(0, 5);
 
   const statCards = [
     { label: 'My Customers',    value: stats.totalCustomers,  icon: Users,       color: 'blue',   sub: 'Total assigned', page: 'customers'   },
@@ -219,7 +222,7 @@ export default function EmployeeDashboard({ onNavigate }: Props) {
               <p className="text-xs text-slate-500 mb-2">Approval Status</p>
               <div className="flex gap-2">
                 <div className="flex-1 text-center p-2 bg-green-50 rounded-lg">
-                  <p className="text-lg font-bold text-green-700">{customers.filter(c => c.assigned_to === tenant?.id && c.status === 'approved').length}</p>
+                  <p className="text-lg font-bold text-green-700">{customers.filter(c => c.assigned_to === employeeId && c.status === 'approved').length}</p>
                   <p className="text-xs text-green-600">Approved</p>
                 </div>
                 <div className="flex-1 text-center p-2 bg-amber-50 rounded-lg">

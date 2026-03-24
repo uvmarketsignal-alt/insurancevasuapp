@@ -77,6 +77,17 @@ export async function pushSnapshot(tenantId: string, payload: ServerSnapshot): P
   }
 }
 
+// Debounced snapshot pusher — batches rapid mutations into one DB write per 1.5s
+const _pendingPush: Record<string, ReturnType<typeof setTimeout>> = {};
+export function debouncedPushSnapshot(tenantId: string, payload: ServerSnapshot, delayMs = 1500): void {
+  if (!isServerSyncEnabled() || !tenantId) return;
+  if (_pendingPush[tenantId]) clearTimeout(_pendingPush[tenantId]);
+  _pendingPush[tenantId] = setTimeout(() => {
+    delete _pendingPush[tenantId];
+    pushSnapshot(tenantId, payload).catch((e) => console.warn('debouncedPushSnapshot failed', e));
+  }, delayMs);
+}
+
 export async function uploadDocumentFile(file: File): Promise<string | null> {
   if (!isServerSyncEnabled()) return null;
   const url = `${apiOrigin()}/api/upload`;
@@ -96,6 +107,36 @@ export async function uploadDocumentFile(file: File): Promise<string | null> {
           body: JSON.stringify({
             filename: file.name,
             contentType: file.type || 'application/octet-stream',
+            data: base64,
+          }),
+        });
+        const j = (await parseJson(res)) as { url?: string } | null;
+        resolve(res.ok && j?.url ? j.url : null);
+      } catch {
+        resolve(null);
+      }
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
+export async function uploadAvatarFile(file: File): Promise<string | null> {
+  if (!isServerSyncEnabled()) return null;
+  const url = `${apiOrigin()}/api/upload-avatar`;
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      const base64 = dataUrl.split(',')[1];
+      if (!base64) { resolve(null); return; }
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({
+            filename: file.name,
+            contentType: file.type || 'image/jpeg',
             data: base64,
           }),
         });

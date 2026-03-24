@@ -8,15 +8,18 @@ export default function CommissionsPage() {
   const { commissions, payCommission, tenant, employees } = useStore();
   const [filter, setFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
 
-  const filtered = commissions.filter(c => {
+  const employeeId = tenant?.role === 'employee' ? employees.find(e => e.email === tenant.email)?.id : null;
+  const baseCommissions = tenant?.role === 'owner' ? commissions : commissions.filter(c => c.employee_id === employeeId);
+
+  const filtered = baseCommissions.filter(c => {
     if (filter === 'paid') return c.is_paid;
     if (filter === 'unpaid') return !c.is_paid;
     return true;
   });
 
-  const totalEarned = commissions.reduce((s, c) => s + c.commission_amount, 0);
-  const totalPaid = commissions.filter(c => c.is_paid).reduce((s, c) => s + c.commission_amount, 0);
-  const totalPending = commissions.filter(c => !c.is_paid).reduce((s, c) => s + c.commission_amount, 0);
+  const totalEarned = baseCommissions.reduce((s, c) => s + c.commission_amount, 0);
+  const totalPaid = baseCommissions.filter(c => c.is_paid).reduce((s, c) => s + c.commission_amount, 0);
+  const totalPending = baseCommissions.filter(c => !c.is_paid).reduce((s, c) => s + c.commission_amount, 0);
 
   const getEmployeeName = (id: string) => {
     const emp = employees.find(e => e.id === id);

@@ -10,14 +10,19 @@ const STAGE_COLORS: Record<string, string> = {
 };
 
 export default function LeadsPage() {
-  const { leads, addLead, updateLeadStage, deleteLead, tenant } = useStore();
+  const { leads, addLead, updateLeadStage, deleteLead, tenant, employees } = useStore();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ full_name: '', phone: '', email: '', source: '', notes: '' });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenant) return;
-    await addLead({ ...form, tenant_id: tenant.id, status: 'New', assigned_to: tenant.id });
+
+    const employeeId = tenant.role === 'employee' 
+      ? employees.find(emp => emp.email === tenant.email)?.id 
+      : undefined;
+
+    await addLead({ ...form, tenant_id: tenant.id, status: 'New', assigned_to: employeeId || '' });
     setShowForm(false);
     setForm({ full_name: '', phone: '', email: '', source: '', notes: '' });
   };
