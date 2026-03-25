@@ -14,28 +14,28 @@ import type { Page, Customer } from '../types';
 interface Props { onNavigate: (page: Page) => void; }
 
 const STATUS_CONFIG = {
-  approved:          { label: 'Approved',           color: 'bg-green-100 text-green-700 border-green-200',  icon: CheckCircle },
-  pending:           { label: 'Pending',             color: 'bg-amber-100 text-amber-700 border-amber-200',  icon: Clock       },
-  rejected:          { label: 'Rejected',            color: 'bg-red-100 text-red-700 border-red-200',        icon: XCircle     },
-  changes_requested: { label: 'Changes Requested',   color: 'bg-blue-100 text-blue-700 border-blue-200',     icon: AlertCircle },
-  deleted:           { label: 'Deleted',             color: 'bg-slate-100 text-slate-500 border-slate-200',  icon: Trash2      },
+  approved: { label: 'Approved', color: 'bg-green-100 text-green-700 border-green-200', icon: CheckCircle },
+  pending: { label: 'Pending', color: 'bg-amber-100 text-amber-700 border-amber-200', icon: Clock },
+  rejected: { label: 'Rejected', color: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
+  changes_requested: { label: 'Changes Requested', color: 'bg-blue-100 text-blue-700 border-blue-200', icon: AlertCircle },
+  deleted: { label: 'Deleted', color: 'bg-slate-100 text-slate-500 border-slate-200', icon: Trash2 },
 };
 
 export default function CustomersPage({ onNavigate }: Props) {
   const { customers, tenant, updateCustomer, deleteCustomer, addAuditLog, employees } = useStore();
-  const employeeId = tenant?.role === 'employee' 
-    ? employees.find(e => e.email === tenant.email)?.id 
+  const employeeId = tenant?.role === 'employee'
+    ? employees.find(e => e.email === tenant.email)?.id
     : undefined; // owners see all customers; no ID-based filter needed
   const user_name = tenant ? `${tenant.name} (${tenant.role})` : '';
-  const [search, setSearch]               = useState('');
-  const [statusFilter, setStatusFilter]   = useState('all');
-  const [selectedId, setSelectedId]       = useState<string | null>(null);
-  const [editingId, setEditingId]         = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [editForm, setEditForm]           = useState<Partial<Customer>>({});
-  const [saving, setSaving]               = useState(false);
-  const [expandedId, setExpandedId]       = useState<string | null>(null);
-  const [pageIndex, setPageIndex]         = useState(1);
+  const [editForm, setEditForm] = useState<Partial<Customer>>({});
+  const [saving, setSaving] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [pageIndex, setPageIndex] = useState(1);
   const [savedSearches, setSavedSearches] = useState<Array<{ id: string; name: string; query: string; status: string }>>([]);
   const PAGE_SIZE = 8;
 
@@ -173,11 +173,10 @@ export default function CustomersPage({ onNavigate }: Props) {
       <div className="flex flex-wrap gap-2">
         {Object.entries({ all: 'All', pending: 'Pending', approved: 'Approved', rejected: 'Rejected', changes_requested: 'Changes Requested' }).map(([val, label]) => (
           <button key={val} onClick={() => setStatusFilter(val)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${
-              statusFilter === val
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${statusFilter === val
                 ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                 : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
-            }`}>
+              }`}>
             {label}
             <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${statusFilter === val ? 'bg-blue-500' : 'bg-slate-100 text-slate-500'}`}>
               {statusCounts[val as keyof typeof statusCounts] ?? 0}
@@ -236,7 +235,7 @@ export default function CustomersPage({ onNavigate }: Props) {
             const statusCfg = STATUS_CONFIG[customer.status] || STATUS_CONFIG['pending'];
             const StatusIcon = statusCfg.icon;
             const isExpanded = expandedId === customer.id;
-            const isEditing  = editingId === customer.id;
+            const isEditing = editingId === customer.id;
 
             return (
               <motion.div key={customer.id} layout className="overflow-hidden">
@@ -364,15 +363,15 @@ export default function CustomersPage({ onNavigate }: Props) {
                           /* VIEW DETAILS */
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                             {[
-                              { label: 'Full Name',       value: customer.full_name,     icon: User        },
-                              { label: 'Phone',           value: customer.phone,          icon: Phone       },
-                              { label: 'Email',           value: customer.email || '—',   icon: Mail        },
-                              { label: 'Gender',          value: customer.gender || '—',  icon: User        },
-                              { label: 'Occupation',      value: customer.occupation || '—', icon: Briefcase },
-                              { label: 'Annual Income',   value: customer.annual_income ? `₹${Number(customer.annual_income).toLocaleString()}` : '—', icon: DollarSign },
-                              { label: 'Address',         value: customer.address || '—', icon: MapPin      },
-                              { label: 'Date of Birth',   value: customer.date_of_birth ? format(new Date(customer.date_of_birth), 'dd MMM yyyy') : '—', icon: Calendar },
-                              { label: 'Risk Score',      value: customer.risk_score ? `${customer.risk_score}/100` : '—', icon: AlertCircle },
+                              { label: 'Full Name', value: customer.full_name, icon: User },
+                              { label: 'Phone', value: customer.phone, icon: Phone },
+                              { label: 'Email', value: customer.email || '—', icon: Mail },
+                              { label: 'Gender', value: customer.gender || '—', icon: User },
+                              { label: 'Occupation', value: customer.occupation || '—', icon: Briefcase },
+                              { label: 'Annual Income', value: customer.annual_income ? `₹${Number(customer.annual_income).toLocaleString()}` : '—', icon: DollarSign },
+                              { label: 'Address', value: customer.address || '—', icon: MapPin },
+                              { label: 'Date of Birth', value: customer.date_of_birth ? format(new Date(customer.date_of_birth), 'dd MMM yyyy') : '—', icon: Calendar },
+                              { label: 'Risk Score', value: customer.risk_score ? `${customer.risk_score}/100` : '—', icon: AlertCircle },
                             ].map(({ label, value, icon: Icon }) => (
                               <div key={label} className="flex items-start gap-2">
                                 <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
