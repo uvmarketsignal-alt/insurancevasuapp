@@ -442,9 +442,9 @@ const SAMPLE_EMPLOYEES: Employee[] = [
     profile: {
       id: 'prof_002',
       tenant_id: 'tenant_001',
-      full_name: 'Vasu Siva',
+      full_name: 'Raghul (Employee)',
       phone: '+919876543211',
-      avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=VasuSiva&backgroundColor=c0aede',
+      avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Raghul&backgroundColor=ffdfbf',
       employee_code: 'UV-EMP-001',
       department: 'Sales',
       join_date: new Date('2024-01-02'),
@@ -666,6 +666,7 @@ function syncToServer(get: () => AppState) {
     familyMembers: s.familyMembers,
     endorsements: s.endorsements,
     complianceReports: s.complianceReports,
+    darkMode: s.darkMode,
     // Strip passwords before persisting to server
     employees: s.employees.map(e => ({
       ...e,
@@ -820,7 +821,10 @@ export const useStore = create<AppState>()(
 
       navigate: (page) => set({ currentPage: page }),
       toggleSidebar: () => set(s => ({ sidebarOpen: !s.sidebarOpen })),
-      toggleDarkMode: () => set(s => ({ darkMode: !s.darkMode })),
+      toggleDarkMode: () => {
+        set(s => ({ darkMode: !s.darkMode }));
+        syncToServer(get);
+      },
       setDarkMode: (mode) => set({ darkMode: mode }),
       setSearchQuery: (query) => set({ searchQuery: query }),
       setInstallPrompt: (prompt) => set({ installPrompt: prompt }),
@@ -871,7 +875,6 @@ export const useStore = create<AppState>()(
         }
 
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'ADD_CUSTOMER',
           entity_type: 'customer',
           entity_id: fullCustomer.id,
@@ -882,7 +885,7 @@ export const useStore = create<AppState>()(
       },
 
       updateCustomer: async (id, data) => {
-        const { customers, tenant } = get();
+        const { customers } = get();
         const sanitizedData: Partial<Customer> = {
           ...data,
           full_name: data.full_name ? sanitizeText(data.full_name) : data.full_name,
@@ -894,7 +897,6 @@ export const useStore = create<AppState>()(
         };
         set({ customers: customers.map(c => c.id === id ? { ...c, ...sanitizedData, updated_at: new Date() } : c) });
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'UPDATE_CUSTOMER',
           entity_type: 'customer',
           entity_id: id,
@@ -904,11 +906,10 @@ export const useStore = create<AppState>()(
       },
 
       deleteCustomer: async (id) => {
-        const { customers, tenant } = get();
+        const { customers } = get();
         const customer = customers.find(c => c.id === id);
         set({ customers: customers.map(c => c.id === id ? { ...c, status: 'deleted', deleted_at: new Date() } : c) });
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'DELETE_CUSTOMER',
           entity_type: 'customer',
           entity_id: id,
@@ -946,7 +947,7 @@ export const useStore = create<AppState>()(
       },
 
       rejectCustomer: async (id, reason) => {
-        const { customers, tenant } = get();
+        const { customers } = get();
         const customer = customers.find(c => c.id === id);
         set({ customers: customers.map(c => c.id === id ? { ...c, status: 'rejected', updated_at: new Date() } : c) });
 
@@ -963,7 +964,6 @@ export const useStore = create<AppState>()(
         }
 
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'REJECT_CUSTOMER',
           entity_type: 'customer',
           entity_id: id,
@@ -973,7 +973,7 @@ export const useStore = create<AppState>()(
       },
 
       requestChanges: async (id, reason) => {
-        const { customers, tenant } = get();
+        const { customers } = get();
         const customer = customers.find(c => c.id === id);
         set({ customers: customers.map(c => c.id === id ? { ...c, status: 'changes_requested', notes: reason, updated_at: new Date() } : c) });
 
@@ -990,7 +990,6 @@ export const useStore = create<AppState>()(
         }
 
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'REQUEST_CHANGES',
           entity_type: 'customer',
           entity_id: id,
@@ -1037,7 +1036,6 @@ export const useStore = create<AppState>()(
         });
 
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'ADD_POLICY',
           entity_type: 'policy',
           entity_id: full.id,
@@ -1048,10 +1046,9 @@ export const useStore = create<AppState>()(
       },
 
       updatePolicy: async (id, data) => {
-        const { policies, tenant } = get();
+        const { policies } = get();
         set({ policies: policies.map(p => p.id === id ? { ...p, ...data, updated_at: new Date() } : p) });
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'UPDATE_POLICY',
           entity_type: 'policy',
           entity_id: id,
@@ -1062,11 +1059,10 @@ export const useStore = create<AppState>()(
 
       // ── DOCUMENTS ─────────────────────────────────────────────────────────
       addDocument: async (doc) => {
-        const { documents, tenant } = get();
+        const { documents } = get();
         const full = { id: `doc_${Date.now()}`, created_at: new Date(), ...doc } as Document;
         set({ documents: [...documents, full] });
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'UPLOAD_DOCUMENT',
           entity_type: 'document',
           entity_id: full.id,
@@ -1077,10 +1073,9 @@ export const useStore = create<AppState>()(
       },
 
       deleteDocument: async (id) => {
-        const { documents, tenant } = get();
+        const { documents } = get();
         set({ documents: documents.filter(d => d.id !== id) });
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'DELETE_DOCUMENT',
           entity_type: 'document',
           entity_id: id,
@@ -1090,7 +1085,7 @@ export const useStore = create<AppState>()(
 
       // ── CLAIMS ────────────────────────────────────────────────────────────
       addClaim: async (claim) => {
-        const { claims, tenant } = get();
+        const { claims } = get();
         const now = new Date();
         const full = { id: `clm_${Date.now()}`, created_at: now, updated_at: now, ...claim } as Claim;
         set({ claims: [...claims, full] });
@@ -1107,7 +1102,6 @@ export const useStore = create<AppState>()(
         });
 
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'FILE_CLAIM',
           entity_type: 'claim',
           entity_id: claim.id,
@@ -1117,10 +1111,9 @@ export const useStore = create<AppState>()(
       },
 
       updateClaimStatus: async (id, status) => {
-        const { claims, tenant } = get();
+        const { claims } = get();
         set({ claims: claims.map(c => c.id === id ? { ...c, status, updated_at: new Date() } : c) });
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'UPDATE_CLAIM_STATUS',
           entity_type: 'claim',
           entity_id: id,
@@ -1131,12 +1124,11 @@ export const useStore = create<AppState>()(
 
       // ── LEADS ─────────────────────────────────────────────────────────────
       addLead: async (lead) => {
-        const { leads, tenant } = get();
+        const { leads } = get();
         const now = new Date();
         const full = { id: `led_${Date.now()}`, created_at: now, updated_at: now, ...lead } as Lead;
         set({ leads: [...leads, full] });
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'ADD_LEAD',
           entity_type: 'lead',
           entity_id: lead.id,
@@ -1146,10 +1138,9 @@ export const useStore = create<AppState>()(
       },
 
       updateLeadStage: async (id, status) => {
-        const { leads, tenant } = get();
+        const { leads } = get();
         set({ leads: leads.map(l => l.id === id ? { ...l, status, updated_at: new Date() } : l) });
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'UPDATE_LEAD_STAGE',
           entity_type: 'lead',
           entity_id: id,
@@ -1165,10 +1156,9 @@ export const useStore = create<AppState>()(
       },
 
       deleteLead: async (id) => {
-        const { leads, tenant } = get();
+        const { leads } = get();
         set({ leads: leads.map(l => l.id === id ? { ...l, status: 'deleted', deleted_at: new Date() } : l) });
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'DELETE_LEAD',
           entity_type: 'lead',
           entity_id: id,
@@ -1205,11 +1195,10 @@ export const useStore = create<AppState>()(
       },
 
       payCommission: async (id) => {
-        const { commissions, tenant } = get();
+        const { commissions } = get();
         set({ commissions: commissions.map(c => c.id === id ? { ...c, is_paid: true, paid_date: new Date() } : c) });
         const comm = commissions.find(c => c.id === id);
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'PAY_COMMISSION',
           entity_type: 'commission',
           entity_id: id,
@@ -1227,10 +1216,9 @@ export const useStore = create<AppState>()(
       },
 
       processRenewal: async (id) => {
-        const { renewals, tenant } = get();
+        const { renewals } = get();
         set({ renewals: renewals.map(r => r.id === id ? { ...r, status: 'completed', processed: true, processed_at: new Date() } : r) });
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'PROCESS_RENEWAL',
           entity_type: 'renewal',
           entity_id: id,
@@ -1241,15 +1229,23 @@ export const useStore = create<AppState>()(
 
       // ── AUDIT LOGS ────────────────────────────────────────────────────────
       addAuditLog: (log) => {
-        const { auditLogs, tenant } = get();
+        const { auditLogs, profile, tenant } = get();
+        
+        // Auto-generate specific user name if not provided
+        const userName = log.user_name || (
+          profile?.full_name 
+            ? `${profile.full_name} (${tenant?.role === 'owner' ? 'Admin' : 'Employee'})`
+            : `${tenant?.name || 'System'}`
+        );
+
         const newLog: AuditLog = {
           ...log,
           id: `aud_${Date.now()}_${Math.random()}`,
           tenant_id: tenant?.id || 'system',
+          user_name: userName,
           created_at: new Date(),
         };
         set({ auditLogs: [newLog, ...auditLogs].slice(0, 500) });
-        // Sync audit logs too so owner can see them from any device/session
         syncToServer(get);
       },
 
@@ -1324,10 +1320,9 @@ export const useStore = create<AppState>()(
 
       // ── SETTINGS & PROFILE ────────────────────────────────────────────────
       updateAppSettings: async (settings) => {
-        const { appSettings, tenant } = get();
+        const { appSettings } = get();
         set({ appSettings: { ...appSettings, ...settings, updated_at: new Date() } });
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'UPDATE_SETTINGS',
           entity_type: 'settings',
           new_values: JSON.stringify(settings),
@@ -1369,7 +1364,7 @@ export const useStore = create<AppState>()(
 
       // ── EMPLOYEES ─────────────────────────────────────────────────────────
       addEmployee: async (employee) => {
-        const { employees, tenant } = get();
+        const { employees } = get();
         set({ employees: [...employees, employee] });
         // Persist to PostgreSQL
         try {
@@ -1394,7 +1389,6 @@ export const useStore = create<AppState>()(
           console.error('addEmployee DB error:', err);
         }
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'ADD_EMPLOYEE',
           entity_type: 'employee',
           entity_id: employee.id,
@@ -1404,7 +1398,7 @@ export const useStore = create<AppState>()(
       },
 
       updateEmployee: async (id, tenantUpdates, profileUpdates) => {
-        const { employees, tenant } = get();
+        const { employees } = get();
         set({
           employees: employees.map(e => {
             if (e.id !== id) return e;
@@ -1423,7 +1417,6 @@ export const useStore = create<AppState>()(
           console.error('updateEmployee DB error:', err);
         }
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: 'UPDATE_EMPLOYEE',
           entity_type: 'employee',
           entity_id: id,
@@ -1433,7 +1426,7 @@ export const useStore = create<AppState>()(
       },
 
       toggleEmployeeStatus: async (id) => {
-        const { employees, tenant } = get();
+        const { employees } = get();
         const emp = employees.find(e => e.id === id);
         const newActive = !emp?.is_active;
         set({ employees: employees.map(e => e.id === id ? { ...e, is_active: newActive } : e) });
@@ -1445,7 +1438,6 @@ export const useStore = create<AppState>()(
           console.error('toggleEmployeeStatus DB error:', err);
         }
         get().addAuditLog({
-          user_name: `${tenant?.name} (${tenant?.role})`,
           action: newActive ? 'ACTIVATE_EMPLOYEE' : 'DEACTIVATE_EMPLOYEE',
           entity_type: 'employee',
           entity_id: id,
@@ -1499,6 +1491,7 @@ export const useStore = create<AppState>()(
             ? (snap.complianceReports.map(reviveDeep) as ComplianceReport[])
             : s.complianceReports,
           employees: Array.isArray(snap.employees) ? (snap.employees.map(reviveDeep) as Employee[]) : s.employees,
+          darkMode: typeof (snap as any).darkMode === 'boolean' ? (snap as any).darkMode : s.darkMode,
           syncFromServerComplete: true,
         });
       },

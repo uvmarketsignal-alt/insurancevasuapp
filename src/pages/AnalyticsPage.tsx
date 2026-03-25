@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
-import { BarChart3, TrendingUp, Users, Shield, DollarSign, Activity } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, Shield, DollarSign, Activity, Download } from 'lucide-react';
 import { useStore } from '../store';
+import { exportAnalyticsToPDF, exportAnalyticsToExcel } from '../utils/export';
 
 export default function AnalyticsPage() {
   const { customers, policies, claims, commissions, leads, renewals } = useStore();
@@ -18,11 +19,27 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-          <BarChart3 className="w-8 h-8 text-violet-600" /> Analytics Dashboard
-        </h1>
-        <p className="text-slate-500 mt-1">Business intelligence and predictive insights</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+            <BarChart3 className="w-8 h-8 text-violet-600" /> Analytics Dashboard
+          </h1>
+          <p className="text-slate-500 mt-1">Business intelligence and predictive insights</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => exportAnalyticsToPDF({ customers, policies, leads, claims, renewals }, new Date().toLocaleString('default', { month: 'long', year: 'numeric' }))}
+            className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium transition-colors shadow-sm"
+          >
+            <Download className="w-4 h-4" /> PDF Report
+          </button>
+          <button
+            onClick={() => exportAnalyticsToExcel({ customers, policies, leads, claims, renewals }, new Date().toLocaleString('default', { month: 'long', year: 'numeric' }))}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg text-sm font-medium transition-colors shadow-sm"
+          >
+            <Download className="w-4 h-4" /> Excel Report
+          </button>
+        </div>
       </div>
 
       {/* KPI Grid */}

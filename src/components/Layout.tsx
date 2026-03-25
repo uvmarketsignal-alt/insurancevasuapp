@@ -22,8 +22,10 @@ import {
   DollarSign,
   Users2,
   ClipboardList,
-  Sparkles
+  Sparkles,
+  Languages
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../store';
 import { Logo } from './Logo';
 import { InstallButton } from './InstallButton';
@@ -47,6 +49,7 @@ interface NavItem {
 }
 
 export default function Layout({ children, onNavigate, currentPage, onNotificationsToggle, onSearchToggle }: LayoutProps) {
+  const { t, i18n } = useTranslation();
   const desktopQuery = '(min-width: 1024px)';
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -62,30 +65,30 @@ export default function Layout({ children, onNavigate, currentPage, onNotificati
 
   const navItems: NavItem[] = [
     // Main
-    { id: 'owner-dashboard', label: 'Owner Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['owner'] },
-    { id: 'employee-dashboard', label: 'Employee Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['employee'] },
-    { id: 'approvals', label: 'Approvals', icon: <FileCheck className="w-5 h-5" />, roles: ['owner'] },
-    { id: 'customers', label: 'Customers', icon: <Users className="w-5 h-5" />, roles: ['owner', 'employee'] },
-    { id: 'new-customer', label: 'New Customer', icon: <UserPlus className="w-5 h-5" />, roles: ['owner', 'employee'] },
+    { id: 'owner-dashboard', label: t('ownerDashboard'), icon: <LayoutDashboard className="w-5 h-5" />, roles: ['owner'] },
+    { id: 'employee-dashboard', label: t('employeeDashboard'), icon: <LayoutDashboard className="w-5 h-5" />, roles: ['employee'] },
+    { id: 'approvals', label: t('approvals'), icon: <FileCheck className="w-5 h-5" />, roles: ['owner'] },
+    { id: 'customers', label: t('customers'), icon: <Users className="w-5 h-5" />, roles: ['owner', 'employee'] },
+    { id: 'new-customer', label: t('newCustomer'), icon: <UserPlus className="w-5 h-5" />, roles: ['owner', 'employee'] },
     
     // Business
-    { id: 'claims', label: 'Claims', icon: <AlertCircle className="w-5 h-5" />, roles: ['owner', 'employee'] },
-    { id: 'leads', label: 'Leads', icon: <Users2 className="w-5 h-5" />, roles: ['owner', 'employee'] },
-    { id: 'renewals', label: 'Renewals', icon: <Clock className="w-5 h-5" />, roles: ['owner', 'employee'] },
-    { id: 'commissions', label: 'Commissions', icon: <DollarSign className="w-5 h-5" />, roles: ['owner', 'employee'] },
+    { id: 'claims', label: t('claims'), icon: <AlertCircle className="w-5 h-5" />, roles: ['owner', 'employee'] },
+    { id: 'leads', label: t('leads'), icon: <Users2 className="w-5 h-5" />, roles: ['owner', 'employee'] },
+    { id: 'renewals', label: t('renewals'), icon: <Clock className="w-5 h-5" />, roles: ['owner', 'employee'] },
+    { id: 'commissions', label: t('commissions'), icon: <DollarSign className="w-5 h-5" />, roles: ['owner', 'employee'] },
     
     // Management
-    { id: 'employees', label: 'Employees', icon: <Users className="w-5 h-5" />, roles: ['owner'] },
-    { id: 'documents', label: 'Documents', icon: <FileText className="w-5 h-5" />, roles: ['owner', 'employee'] },
-    { id: 'family-tree', label: 'Family Tree', icon: <Home className="w-5 h-5" />, roles: ['owner', 'employee'] },
+    { id: 'employees', label: t('employees'), icon: <Users className="w-5 h-5" />, roles: ['owner'] },
+    { id: 'documents', label: t('documents'), icon: <FileText className="w-5 h-5" />, roles: ['owner', 'employee'] },
+    { id: 'family-tree', label: t('familyTree'), icon: <Home className="w-5 h-5" />, roles: ['owner', 'employee'] },
     
     // System
-    { id: 'audit-logs', label: 'Audit Logs', icon: <ClipboardList className="w-5 h-5" />, roles: ['owner'] },
-    { id: 'knowledge-base', label: 'Knowledge Base', icon: <BookOpen className="w-5 h-5" />, roles: ['owner', 'employee'] },
-    { id: 'policy-assistant', label: 'Policy Assistant', icon: <Sparkles className="w-5 h-5" />, roles: ['owner', 'employee'] },
-    { id: 'analytics', label: 'Analytics', icon: <BarChart3 className="w-5 h-5" />, roles: ['owner'] },
-    { id: 'compliance', label: 'Compliance', icon: <ShieldCheck className="w-5 h-5" />, roles: ['owner'] },
-    { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" />, roles: ['owner'] },
+    { id: 'audit-logs', label: t('auditLogs'), icon: <ClipboardList className="w-5 h-5" />, roles: ['owner'] },
+    { id: 'knowledge-base', label: t('knowledgeBase'), icon: <BookOpen className="w-5 h-5" />, roles: ['owner', 'employee'] },
+    { id: 'policy-assistant', label: t('policyAssistant'), icon: <Sparkles className="w-5 h-5" />, roles: ['owner', 'employee'] },
+    { id: 'analytics', label: t('analytics'), icon: <BarChart3 className="w-5 h-5" />, roles: ['owner'] },
+    { id: 'compliance', label: t('compliance'), icon: <ShieldCheck className="w-5 h-5" />, roles: ['owner'] },
+    { id: 'settings', label: t('settings'), icon: <Settings className="w-5 h-5" />, roles: ['owner'] },
   ];
 
   const groupedNavItems = navItems.reduce((acc, item) => {
@@ -226,6 +229,14 @@ export default function Layout({ children, onNavigate, currentPage, onNotificati
             </div>
 
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => i18n.changeLanguage(i18n.language === 'en' ? 'ta' : 'en')}
+                className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors flex items-center justify-center font-bold"
+                title="Toggle Language (English / Tamil)"
+              >
+                <Languages className="w-5 h-5" />
+                <span className="ml-1 text-xs">{i18n.language === 'en' ? 'EN' : 'தமிழ்'}</span>
+              </button>
               {/* Search / Command Palette */}
               <button
                 onClick={onSearchToggle}
@@ -270,11 +281,15 @@ export default function Layout({ children, onNavigate, currentPage, onNotificati
 
               {/* User avatar */}
               <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                <button
+                  onClick={() => onNavigate('profile')}
+                  className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center hover:opacity-90 transition-opacity focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 outline-none"
+                  title="View Profile"
+                >
                   <span className="text-white text-sm font-bold">
                     {(profile?.full_name || tenant?.name || 'U').charAt(0).toUpperCase()}
                   </span>
-                </div>
+                </button>
               </div>
             </div>
           </div>

@@ -3,16 +3,17 @@ import { motion } from 'framer-motion';
 import {
   Users, FileCheck, AlertCircle, TrendingUp, Plus,
   BarChart2, Shield, Bell, ArrowRight, CheckCircle, Clock,
-  RefreshCw, Star, Activity, DollarSign, FileText,
+  RefreshCw, Activity, DollarSign, FileText,
 } from 'lucide-react';
 import { useStore } from '../store';
 import { format } from 'date-fns';
 import type { Page } from '../types';
+import EmployeeLeaderboard from '../components/EmployeeLeaderboard';
 
 interface Props { onNavigate: (page: Page) => void; }
 
 export default function OwnerDashboard({ onNavigate }: Props) {
-  const { customers, claims, leads, commissions, employees, renewals, notifications,
+  const { customers, claims, leads, commissions, renewals, notifications,
     loadInitialData, tenant, policies } = useStore();
 
   const [stats, setStats] = useState({
@@ -174,42 +175,9 @@ export default function OwnerDashboard({ onNavigate }: Props) {
           </div>
         </div>
 
-        {/* Employee Performance */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="p-5 border-b border-slate-100 flex items-center gap-2">
-            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Star className="w-4 h-4 text-purple-600" />
-            </div>
-            <h2 className="font-semibold text-slate-900">Employee Stats</h2>
-          </div>
-          <div className="p-5 space-y-4">
-            {employees.length > 0 ? employees.slice(0, 4).map((emp, i) => {
-              const empCustomers = customers.filter(c => c.assigned_to === emp.id).length;
-              const empCommission = commissions.filter(c => c.employee_id === emp.id && c.is_paid).reduce((s, c) => s + Number(c.commission_amount), 0);
-              return (
-                <div key={emp.id} className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
-                    i === 0 ? 'bg-gradient-to-br from-blue-500 to-blue-600' :
-                    i === 1 ? 'bg-gradient-to-br from-purple-500 to-purple-600' :
-                    i === 2 ? 'bg-gradient-to-br from-green-500 to-green-600' :
-                    'bg-gradient-to-br from-orange-500 to-orange-600'
-                  }`}>
-                    {emp.profile.full_name[0]}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 truncate">{emp.profile.full_name}</p>
-                    <p className="text-xs text-slate-500">{empCustomers} customers · ₹{empCommission.toLocaleString()}</p>
-                  </div>
-                </div>
-              );
-            }) : (
-              <div className="text-center py-4">
-                <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm text-slate-500">No employees yet</p>
-                <button onClick={() => onNavigate('employees')} className="mt-2 text-xs text-blue-600 hover:underline">Add Employee</button>
-              </div>
-            )}
-          </div>
+        {/* Employee Performance Leaderboard */}
+        <div className="relative">
+          <EmployeeLeaderboard />
         </div>
       </div>
 

@@ -7,6 +7,7 @@ import {
 import { useStore } from '../store';
 import { format } from 'date-fns';
 import type { Page } from '../types';
+import EmployeeLeaderboard from '../components/EmployeeLeaderboard';
 
 interface Props { onNavigate: (page: Page) => void; }
 
@@ -243,6 +244,11 @@ export default function EmployeeDashboard({ onNavigate }: Props) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Leaderboard Row */}
+      <div className="mt-6">
+        <EmployeeLeaderboard />
       </div>
 
       {/* Pending items reminder */}

@@ -101,6 +101,16 @@ export function App() {
     }
   }, [isAuthenticated, tenant]);
 
+  // Sync from server on auth
+  const loadInitialData = useStore(s => s.loadInitialData);
+  const syncFromServerComplete = useStore(s => s.syncFromServerComplete);
+
+  useEffect(() => {
+    if (isAuthenticated && tenant?.id && !syncFromServerComplete) {
+      loadInitialData(tenant.id);
+    }
+  }, [isAuthenticated, tenant?.id, syncFromServerComplete, loadInitialData]);
+
   const navigate = (page: Page) => setCurrentPage(page);
 
   const handleLogin = () => {
